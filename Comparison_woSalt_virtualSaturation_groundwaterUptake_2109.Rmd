@@ -260,7 +260,7 @@ lines(M,L_n(M,Z,P=2,soilpar=soilpar,vegpar=vegpar)$U,col="red")
 # Now do all plant uptake and growth
 # water uptake by plants: include infiltration in available water
 
-       M_sub[tt + 1] <- M_sub[tt]*Svir_sub[tt]
+       M_sub[tt + 1] <- M_sub[tt] + Svir_sub[tt]
 
       WU_sub[tt] <- WU(M_sub[tt + 1],P.old,par)*timeincr 
       
