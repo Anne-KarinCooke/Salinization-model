@@ -1,0 +1,95 @@
+
+## Changing climates
+#Alpha and lambda are set as sequence of 10 different value. 
+
+
+alpha <- seq(0.6,1.5,by=0.1) 
+lambda <- seq(0.1,1,by=0.1)
+
+Store <- list()
+sub_store <- list()
+time <- 1000
+delta <- 0
+set.seed(1000)
+
+
+#This loop generates rainfall with the distribution properties alpha[i] and lambda[j].
+#For each alpha[i] and each lambda[j] the soil water balance function is executed and the results stored in a nested list.
+
+# set the mortality value
+par_in$d <- 0.15
+
+for (i in 1:length(alpha)) {
+  
+for (j in 1:length(lambda)) {
+    # generate the rainfall
+    Rain <- Precip(time,alpha[i],lambda[j],delta)
+    Rainlist <- data.frame(Precip(time,alpha[i],lambda[j],delta))
+    
+    sub_store[[j]] <-data.frame(alpha_o=rep(alpha[i],time),
+                                lambda_o=rep(lambda[j],time),
+                                balances(Rain,plotit=F, par=par_in,
+                                soilpar=list(n=n, s_fc=s_fc, 
+                                             K_s=K_s, psi_s_bar=psi_s_bar,
+                                             h1bar=h1bar, b=b, Ep=Ep),
+	                                         	vegpar=list(Zr=40, c_p=0.4)))
+  }
+  Store[[i]] <- sub_store
+}
+
+
+
+## Results
+
+### Plotted climate combinations
+
+clim1: lambda=0.1, alpha=0.6
+clim2: lambda=1, alpha=0.6
+clim3: lambda=0.5, alpha=1
+clim4: lambda=0.1, alpha=1.5
+clim5: lambda=1, alpha=1.5
+
+
+#with salt, dry climate
+
+clim1rain <- Precip(time,alpha=0.6,lambda=0.1,delta)
+clim1 <- balances(Rain=clim1rain,plotit=T, soilpar=list(n=n,Zr=Zr, s_fc=s_fc, 
+                                            K_s=K_s, psi_s_bar=psi_s_bar,
+                                             h1bar=h1bar, b=b, Ep=Ep),
+                                             vegpar=list(c_p=0.4,Zr=Zr))
+
+
+ #with salt, wet climate
+ clim5rain <- Precip(time,alpha=1.5,lambda=1,delta)
+
+clim5 <- balances(Rain=clim5rain,plotit=T, soilpar=list(n=n,Zr=Zr, s_fc=s_fc, 
+                                             K_s=K_s, psi_s_bar=psi_s_bar,
+                                             h1bar=h1bar, b=b, Ep=Ep),
+                                             vegpar=list(c_p=0.4,Zr=Zr))
+
+
+
+#Plotting M and P for different lambdas
+
+
+require(ggplot2)
+lambda_sum <- do.call(rbind,Store[][[2]])
+lambda_sum$time <- rep(1:time,length(lambda))
+
+pl <- ggplot(lambda_sum,aes(x=time,y=P, colour="P (plant biomass density [gm-2])")) + geom_line()
+pl  <- pl + geom_line(aes(x=time,y=M, colour="Moisture"))  
+pl <- pl +  facet_wrap(~lambda_o, ncol=2)   #, colour=lambda_o (put this in aes-brackets) 
+pl  + ggtitle("Plant biomass P and soilmoisture M for varying lambdas") +  geom_line(aes(x=time, y=SmM, colour= "S (soil salt mg/L")) + theme(plot.title = element_text(lineheight=.8, face="bold"))
+
+
+#Plotting Soil water salt concentration for different alphas and lambdas
+
+lambda_sum_all <- do.call(rbind,do.call(rbind,Store))
+lambda_sum_all$time <- rep(rep(1:time,length(lambda)),length(alpha))
+
+pa <- ggplot(lambda_sum_all,aes(x=time,y=SmM,col=lambda_o)) + geom_line(linetype=1) 
+pa <- pa + scale_color_gradient(low="blue", high="red") + facet_wrap(~alpha_o, ncol=2) + ggtitle("Soil water salt mass [g] for varying alphas and lambdas") + theme(plot.title = element_text(lineheight=.8, face="bold"))
+pa  
+
+
+
