@@ -99,7 +99,7 @@ balances <- function(Rain, par=par_in,plotit=F,
       WU_sub[tt] <- WU(M=Svir_sub[tt + 1],P.old,par)*timeincr 
       
       # growth rate
-      Gr_sub[tt] <- Gr(M=Svir_sub[tt + 1], P.old,par)*timeincr 
+      Gr_sub[tt] <- Gr(M_sub[tt + 1], P.old,par)*timeincr 
       # Mortality
       Mo_sub[tt]<- Mo(P.old, M=M.old, Svir=Svir.old, d=par_in$d)*timeincr
       # calculate plant biomass balance
