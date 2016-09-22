@@ -14,16 +14,14 @@ source("Hillslope cascade.R")
  
  par_in$d <- 0.15
  
- for (g in 1:length(grids)){ 
-   
-   for (i in 1:length(alpha)) {
+for (i in 1:length(alpha)) {
      
      for (j in 1:length(lambda)) {
        # generate the rainfall
        Rain <- Precip(time,alpha[i],lambda[j],delta)
        Rainlist <- data.frame(Precip(time,alpha[i],lambda[j],delta))
        
-       sub_store[[j]] <-data.frame(g_o=grids[g], alpha_o=rep(alpha[i],time),
+       sub_store[[j]] <-data.frame(alpha_o=rep(alpha[i],time),
                                     lambda_o=rep(lambda[j],time), 
                                     
                                     balances2D(Rain,plotit=T,  soilpar=list(n=n,Zr=Zr, s_fc=s_fc, K_s=K_s, h1bar=h1bar, b=b),
@@ -34,8 +32,8 @@ source("Hillslope cascade.R")
        }
        Store[[i]] <- sub_store
      }
-   gstore[[g]] <-Store
- }
+ #  gstore[[g]] <-Store
+ 
    
    
  

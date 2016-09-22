@@ -28,8 +28,8 @@ k1=5
 ## Source functions
 #setwd("/home/anne-karin/Schreibtisch/Salinization updated")
 source("Rainfall.R")
-source("Leaching&Upflow.R")
-source("G function (Eagelson 1978).R")
+source("Leaching&Upflow")
+source("G function (Eagelson 1978)")
 source("Infiltration function.R")
 source("Vegetation functions.R")
 #source("Overland flow.R")
@@ -68,9 +68,9 @@ balances2D <- function(Rain, par=par_in,plotit=F,
   # Storage vectors for the daily steps are initialized.
   
   
-  M <- matrix(nrow= length(Rain), ncol =grids)  # soil moisture [mm]
-  h <- matrix(nrow= length(Rain), ncol =grids) # infiltration depth [mm]
-  P <- matrix(nrow= length(Rain), ncol =grids) #biomass density []
+  M <- matrix(0,nrow= length(Rain), ncol =grids)  # soil moisture [mm]
+  h <- matrix(0,nrow= length(Rain), ncol =grids) # infiltration depth [mm]
+  P <- matrix(0,nrow= length(Rain), ncol =grids) #biomass density []
   CM<- matrix(nrow= length(Rain), ncol =grids) # Salt concentration in soil water in g/L or g/mm
   SmI<- matrix(nrow= length(Rain), ncol =grids) # Salt mass in infiltrating water [g]
   SmM <- matrix(nrow= length(Rain), ncol =grids) # Salt mass in soil water [g]
@@ -188,7 +188,7 @@ balances2D <- function(Rain, par=par_in,plotit=F,
       
       # Calculate salt concentration in the soil
       CM_sub[tt+1,g]<- SmM_sub[tt+1,g]/M_sub[tt + 1,g] 
-      #browser()
+      browser()
       # 3. calculate leaching amount
       #       L_sub[tt] <- L(M_sub[tt+1], soilpar$K_s, soilpar$s_fc,soilpar$Zr,soilpar$n)*timeincr
 
