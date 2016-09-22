@@ -26,20 +26,27 @@ gmax=0.05
 k1=5
 
 ## Source functions
-setwd("/home/anne-karin/Schreibtisch/Salinization updated")
+#setwd("/home/anne-karin/Schreibtisch/Salinization updated")
 source("Rainfall.R")
 source("Leaching&Upflow.R")
 source("G function (Eagelson 1978).R")
 source("Infiltration function.R")
 source("Vegetation functions.R")
-source("Overland flow.R")
-
+#source("Overland flow.R")
+OF<- function(cn, Mn, h, Sl){
+  
+  q=(cn/Mn)*h^(5/3)*Sl^(1/2)
+  
+  return(q)
+}
 
 
 ###### GRID CELLS
 grids <- 3
 
-
+### DIVERGENCE, diffusion
+# Dm is the soil moisture diffusivity parameter
+Dm = 0.27 # from Saco et al, 2013, in m^2/d
 #distance between the "buckets"
 dist= 300
 # cm GROUNDWATER DEPTH from the surface
@@ -70,12 +77,11 @@ balances2D <- function(Rain, par=par_in,plotit=F,
   In <- matrix(nrow= length(Rain), ncol =grids) # infiltration [mm]
   # Leach <- rep(0,length(Rain)) # leaching [mm]
   Svir <- matrix(nrow= length(Rain), ncol =grids) # virtual saturation
-  
   L<- matrix(nrow= length(Rain), ncol =grids)
   U<- matrix(nrow= length(Rain), ncol =grids)
+  
   q<- matrix(nrow= length(Rain), ncol =grids) # Overland flow, runoff
-  
-  
+  Diff<- matrix(nrow= length(Rain), ncol =grids) # divergence of soil moisture from one grid cells to the next
   
   # We decided to split the numerical calculations for the daily into 12 substeps.
   
@@ -98,8 +104,10 @@ balances2D <- function(Rain, par=par_in,plotit=F,
   Svir_sub<- matrix(nrow= deltat, ncol =grids)  # virtual saturation
   L_sub<- matrix(nrow= deltat, ncol =grids)  # leaching
   U_sub<-matrix(nrow= deltat, ncol =grids)  # capillary upflow
+  
   q_sub<-matrix(nrow= deltat, ncol =grids)  # overland flow  
-
+  Diff_sub<- matrix(nrow=deltat, ncol =grids) # divergence of soil moisture from one grid cells to the next
+  
   h.old<-rep(0,grids)
   P.old<-rep(0,grids)
   M.old<-rep(0,grids)
@@ -109,6 +117,7 @@ balances2D <- function(Rain, par=par_in,plotit=F,
 
   L_salt<-rep(0,grids)
   U_salt<-rep(0,grids)
+  
 
 #initital 
 # M[1,1] <- 5
@@ -157,7 +166,7 @@ balances2D <- function(Rain, par=par_in,plotit=F,
       
       #  1. Update soil moisture with infiltration
       
-      M_sub[tt + 1,g] <- M.old[g] + I_sub[tt,g]      
+      M_sub[tt + 1,g] <- M.old[g] + I_sub[tt,g] #+ Diff[tt,g-1]     # plus soil moisture diffusing from grid cell higher up  
       
       # Now do all plant uptake and growth
       # water uptake by plants: include infiltration in available water
@@ -184,11 +193,14 @@ balances2D <- function(Rain, par=par_in,plotit=F,
       #       L_sub[tt] <- L(M_sub[tt+1], soilpar$K_s, soilpar$s_fc,soilpar$Zr,soilpar$n)*timeincr
 
       L_sub[tt,g]<-do.call(L_n,list(M=M_sub[tt + 1,g],Z=Z[g],P=P_sub[tt+1,g],soilpar=soilpar,vegpar=vegpar))$L
-  
-      U_sub[tt,g]<-do.call(L_n, list(M=M_sub[tt + 1,g],Z=Z[g],P=P_sub[tt+1,g],soilpar=soilpar,vegpar=vegpar))$U #soilpar=soilpar,vegpar=vegpar#       U_sub[tt,g]<-do.call(L_n,list(M=M_sub[tt + 1,g],Z=Z[g],P=P_sub[tt+1,g],soilpar=soilpar,vegpar=vegpar))$U       
-
-      # 4. final adjust soil moisture for leaching
-      M_sub[tt + 1,g] <- M_sub[tt + 1,g] - L_sub[tt,g]*timeincr + U_sub[tt,g]*timeincr  ## - divergence 
+     # Upflow from groundwater
+      U_sub[tt,g]<-do.call(L_n, list(M=M_sub[tt + 1,g],Z=Z[g],P=P_sub[tt+1,g],soilpar=soilpar,vegpar=vegpar))$U 
+     # Divergence, soil moisture diffusion
+      Diff[tt,g]<- M_sub[tt+1,g]*(sqrt(Dm)*timeincr)*((Z[g+1]-Z[g])/dist)  
+        
+      # 4. final adjust soil moisture for leaching AND DIVERGENCE
+      M_sub[tt + 1,g] <- M_sub[tt + 1,g] - L_sub[tt,g]*timeincr + U_sub[tt,g]*timeincr - Diff[tt,g] 
+      
       
       # calculate saltbalance
       L_salt[g] <- CM.old[g]*L_sub[tt,g]*timeincr
@@ -225,7 +237,7 @@ balances2D <- function(Rain, par=par_in,plotit=F,
   # Plotting
   
   if (plotit==T) {  
-    plot(M, type="l",ylim=c(0,100),xlim=c(0,time),xlab=("time [d]"), main=paste("lambda=", lambda[j],"alpha=", alpha[i]))
+    plot(M, type="l",ylim=c(0,100),xlim=c(0,time),xlab=("time [d]"), main=paste("lambda=", lambda[j],"alpha=", alpha[i], "grid=", grids[g]))
     points(Rain*10, type="h", col="skyblue")
     
     lines(Svir*10,type="l", col="blue")
