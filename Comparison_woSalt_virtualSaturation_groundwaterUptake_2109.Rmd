@@ -260,12 +260,12 @@ lines(M,L_n(M,Z,P=2,soilpar=soilpar,vegpar=vegpar)$U,col="red")
 # Now do all plant uptake and growth
 # water uptake by plants: include infiltration in available water
 
-       M_sub[tt + 1] <- M_sub[tt] + Svir_sub[tt]
+       #M_sub[tt + 1] <- M_sub[tt] + Svir_sub[tt]
 
-      WU_sub[tt] <- WU(M_sub[tt + 1],P.old,par)*timeincr 
+      WU_sub[tt] <- WU(M=Svir.old,P.old,par)*timeincr 
       
       # growth rate
-      Gr_sub[tt] <- Gr(M_sub[tt + 1], P.old,par)*timeincr 
+      Gr_sub[tt] <- Gr(M=Svir.old, P.old,par)*timeincr 
       # Mortality
       Mo_sub[tt]<- Mo(P.old, M=M.old, Svir=Svir.old, d=par_in$d)*timeincr
       # calculate plant biomass balance
@@ -393,7 +393,7 @@ This loop generates rainfall with the distribution properties alpha[i] and lambd
 For each alpha[i] and each lambda[j] the soil water balance function is executed and the results stored in a nested list.
 ```{r runClimateLoop}
 # set the mortality value
-par_in$d <- 0.15
+par_in$d <- 0.05
 
 for (i in 1:length(alpha)) {
   
@@ -477,8 +477,9 @@ lambda_sum_all <- do.call(rbind,do.call(rbind,Store))
 lambda_sum_all$time <- rep(rep(1:time,length(lambda)),length(alpha))
 
 
-pa <- ggplot(lambda_sum_all,aes(x=time,y=SmM,col=lambda_o)) + geom_line(linetype=1) 
-pa <- pa + scale_color_gradient(low="blue", high="red") + facet_wrap(~alpha_o, ncol=2) + ggtitle("Soil water salt mass [g] for varying alphas and lambdas") + theme(plot.title = element_text(lineheight=.8, face="bold"))
+pa <- ggplot(lambda_sum_all,aes(x=time,y=SmM,col=as.factor(lambda_o))) + geom_line(linetype=1) 
+# pa <- pa + + scale_color_gradient(low="blue", high="red")
+pa <- pa  + facet_wrap(~alpha_o, ncol=2) + ggtitle("Soil water salt mass [g] for varying alphas and lambdas") + theme(plot.title = element_text(lineheight=.8, face="bold"))
 pa  
 ```
 
