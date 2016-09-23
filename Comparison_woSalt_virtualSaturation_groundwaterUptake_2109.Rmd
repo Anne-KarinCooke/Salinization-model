@@ -296,7 +296,7 @@ lines(M,L_n(M,Z,P=2,soilpar=soilpar,vegpar=vegpar)$U,col="red")
     U_salt <- CM.gw*U_sub[tt]*timeincr
        
       SmI_sub[tt+1]<- SmI.old + I_sub[tt]*ConcConst - L_salt
-      SmM_sub[tt+1]<- SmI_sub[tt + 1] 
+      SmM_sub[tt+1]<- SmI_sub[tt + 1] + U_salt ### I totally forgot to put U_salt here
        
 #       SmGW_sub[tt+1] <- SmGW.old + L_salt - U_salt
       
