@@ -223,6 +223,7 @@ lines(M,L_n(M,Z,P=2,soilpar=soilpar,vegpar=vegpar)$U,col="red")
 
    L_sub<-rep(0,deltat) # calculates leakage loss without evaporation loss
    U_sub<-rep(0,deltat)
+   Overflow<-rep(0,deltat)
 
   
    timeincr= 1/deltat
@@ -247,7 +248,7 @@ lines(M,L_n(M,Z,P=2,soilpar=soilpar,vegpar=vegpar)$U,col="red")
 
 # Balance for water depth on soil
 
-      h_sub[tt+1] <- h.old + ifelse(tt==1,Rain[t],0) - Infil(h.old, P.old)*timeincr
+      h_sub[tt+1] <- h.old + ifelse(tt==1,Rain[t],0) - Infil(h.old, P.old)*timeincr + Overflow[tt]
 
 # Infiltration
 
@@ -261,9 +262,7 @@ lines(M,L_n(M,Z,P=2,soilpar=soilpar,vegpar=vegpar)$U,col="red")
 # water uptake by plants: include infiltration in available water
 
        #M_sub[tt + 1] <- M_sub[tt] + Svir_sub[tt]
-
       WU_sub[tt] <- WU(M=Svir.old,P.old,par)*timeincr 
-      
       # growth rate
       Gr_sub[tt] <- Gr(M=Svir.old, P.old,par)*timeincr 
       # Mortality
@@ -289,23 +288,20 @@ lines(M,L_n(M,Z,P=2,soilpar=soilpar,vegpar=vegpar)$U,col="red")
                                soilpar = soilpar, vegpar = vegpar))$U
    # U_sub[tt]<-do.call(L_n,list(M=M_sub[tt + 1],Z=Z,soilpar=soilpar,vegpar=vegpar))$U
       # 4. final adjust soil moisture for leaching
-       M_sub[tt + 1] <- M_sub[tt + 1] - L_sub[tt]*timeincr + U_sub[tt]*timeincr
+       M_sub[tt + 1] <- M_sub[tt + 1] - L_sub[tt]*timeincr + U_sub[tt]*timeincr - Overflow[tt]
+### This is new
+  if (U_sub[tt]> (soilpar$s_fc*(soilpar$n*soilpar$Zr))-M_sub[tt]){
+      Overflow[tt] <- U_sub[tt]-((soilpar$s_fc*(soilpar$n*soilpar$Zr))-M_sub[tt])
+  }
 
 # calculate saltbalance
     L_salt <- CM.old*L_sub[tt]*timeincr
     U_salt <- CM.gw*U_sub[tt]*timeincr
        
       SmI_sub[tt+1]<- SmI.old + I_sub[tt]*ConcConst - L_salt
-<<<<<<< HEAD
       SmM_sub[tt+1]<- SmI_sub[tt + 1] + U_salt
-=======
-      SmM_sub[tt+1]<- SmI_sub[tt + 1] + U_salt ### I totally forgot to put U_salt here
->>>>>>> 7f15483493dd01185cb3604ae8c88d70a5c448d5
        
-#       SmGW_sub[tt+1] <- SmGW.old + L_salt - U_salt
       
-
-#browser()
     # I have now scaled Svir to M  
     Svir_sub[tt + 1]<-soilpar$n*vegpar$Zr*((soilpar$h1bar)^(1/soilpar$b))*
                      ((soilpar$h1bar)*(M_sub[tt + 1]/
