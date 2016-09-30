@@ -62,7 +62,7 @@ Soil properties were derived from standard Australian soils in Neurotheta (Minas
   Ep=10 # Evaporation
 
 
-  Z =1000 # cm GROUNDWATER DEPTH
+  Z =100 # cm GROUNDWATER DEPTH
 
 soilpar <- list(b = b, n = n, s_fc = s_fc, K_s = K_s, 
                 psi_s_bar = psi_s_bar, h1bar = h1bar, hb = hb, Ep=Ep)
@@ -170,7 +170,7 @@ L_n <- function(M,Z,P,soilpar,vegpar) {
   # leaching
   #ifelse(soilpar$s_fc>n,soilpar$s_fc<-soilpar$s_fc,soilpar$s_fc<-n)
   l <- M*exp(-((soilpar$s_fc-(M/(Zr*soilpar$n)))*K_s/(Zr*soilpar$n)))
-  
+  #browser()
 return(list(U=u,L=l))
 }
 
@@ -213,7 +213,7 @@ balances <- function(Rain, par, plotit=F,
    In <- rep(0,length(Rain)) # infiltration [mm]
 # Leach <- rep(0,length(Rain)) # leaching [mm]
    Svir <- rep(0,length(Rain)) # virtual saturation
-  
+  # Overfl<-rep(0,length(Rain))
    L<- rep(0,length(Rain))
    U<- rep(0,length(Rain))
 
@@ -231,7 +231,7 @@ balances <- function(Rain, par, plotit=F,
 
 # We decided to split the numerical calculations for the daily into 12 substeps.
 
-   deltat <- 12 # split in 12 increments
+   deltat <- 100 # split in 12 increments
 
   
 # Storage vectors for the substeps are initialized.
@@ -249,12 +249,11 @@ balances <- function(Rain, par, plotit=F,
    CM_sub<- rep(0,deltat) 
    # Posm_bar<- rep(0,deltat) # osmotic pressure of soil water in bar
    # fosm<- rep(0,deltat) # "osmotic factor", reduces available soil water to plant water uptake
-   L_sub <- rep(0,deltat) # leaching
   Svir_sub <- rep(0,deltat) # virtual saturation
 
    L_sub<-rep(0,deltat) # calculates leakage loss without evaporation loss
    U_sub<-rep(0,deltat)
-Overflow<-rep(0,deltat)
+   # Overflow<-rep(0,deltat)
 
 
   
@@ -270,8 +269,8 @@ Overflow<-rep(0,deltat)
       SmI.old <-ifelse(tt==1,SmI[t-1],SmI_sub[tt])
       CM.old <-ifelse(tt==1,CM[t-1],CM_sub[tt])
      Svir.old <-ifelse(tt==1,Svir[t-1],Svir_sub[tt])
-
-
+ #     Overfl.old <-ifelse(tt==1,Overfl[t-1],Overflow[tt])
+#browser()
 # Balance for water depth on soil
 
 
@@ -283,7 +282,8 @@ Overflow<-rep(0,deltat)
 # }
 
 #  h_sub[tt+1] <- h.old + ifelse(tt==1,Rain[t],0) - Infil(h.old, P.old,par)*timeincr
-h_sub[tt+1] <- ifelse(Overflow[tt] >0,h.old + ifelse(tt==1,Rain[t],0) - Infil(h.old, P.old,par)*timeincr + Overflow[tt],h.old + ifelse(tt==1,Rain[t],0) - Infil(h.old, P.old,par)*timeincr)
+h_sub[tt+1] <- h.old + ifelse(tt==1,Rain[t],0) - Infil(h.old, P.old,par)*timeincr
+    #ifelse(Overfl.old >0,h.old + ifelse(tt==1,Rain[t],0) - Infil(h.old, P.old,par)*timeincr + Overfl.old,h.old + ifelse(tt==1,Rain[t],0) - Infil(h.old, P.old,par)*timeincr)
 
 # Infiltration
 
@@ -318,9 +318,9 @@ h_sub[tt+1] <- ifelse(Overflow[tt] >0,h.old + ifelse(tt==1,Rain[t],0) - Infil(h.
    L_sub[tt]<-do.call(L_n,list(M = M_sub[tt + 1], P = P_sub[tt + 1], Z = Z,soilpar = soilpar,vegpar = vegpar))$L 
    
    U_sub[tt]<-do.call(L_n,list(M = M_sub[tt + 1],P = P_sub[tt + 1], Z = Z,soilpar = soilpar, vegpar = vegpar))$U
-
+#browser()
 ## If U exceeds what fits into M, it adds to h
-  Overflow[tt] <- U_sub[tt]*timeincr-((soilpar$s_fc*(soilpar$n*vegpar$Zr))-M_sub[tt+1])
+#  Overflow[tt+1] <- (U_sub[tt]*timeincr-L_sub[tt]*timeincr)-((soilpar$s_fc*(soilpar$n*vegpar$Zr))-M_sub[tt+1])
 
       # 4. final adjust soil moisture for leaching
 # overflow onlz occurs when positive of course
@@ -332,7 +332,9 @@ h_sub[tt+1] <- ifelse(Overflow[tt] >0,h.old + ifelse(tt==1,Rain[t],0) - Infil(h.
 #     M_sub[tt + 1] <- M_sub[tt + 1] - L_sub[tt]*timeincr + U_sub[tt]*timeincr
 #   }
 
-  M_sub[tt + 1] <- ifelse(Overflow[tt] >0,M_sub[tt + 1] - L_sub[tt]*timeincr + U_sub[tt]*timeincr - Overflow[tt], M_sub[tt + 1] - L_sub[tt]*timeincr + U_sub[tt]*timeincr)
+  M_sub[tt + 1] <- M_sub[tt + 1] - L_sub[tt]*timeincr + U_sub[tt]*timeincr 
+    #ifelse(Overflow[tt+1] >0,M_sub[tt + 1] - L_sub[tt]*timeincr + U_sub[tt]*timeincr - Overflow[tt], M_sub[tt + 1] - L_sub[tt]*timeincr + U_sub[tt]*timeincr)
+#  U_sub[tt] <- ifelse(Overflow[tt+1] >0,U_sub[tt] - Overflow[tt+1]/timeincr, U_sub[tt]) 
 
 # calculate saltbalance
     L_salt <- CM.old*L_sub[tt]*timeincr
@@ -359,11 +361,11 @@ h_sub[tt+1] <- ifelse(Overflow[tt] >0,h.old + ifelse(tt==1,Rain[t],0) - Infil(h.
     CM[t] = CM_sub[deltat]
     SmI[t] = SmI_sub[deltat]
     SmM[t] = SmM_sub[deltat]
-    In[t]= I_sub[deltat]
-    L[t] = L_sub[deltat]
-    U[t] = U_sub[deltat]
+    In[t]= sum(I_sub)
+    L[t] = sum(L_sub)
+    U[t] = sum(U_sub)
     Svir[t] = Svir_sub[deltat]
-
+ #   Overfl[t] = Overflow[deltat]
 }
 
 
@@ -418,6 +420,7 @@ This loop generates rainfall with the distribution properties alpha[i] and lambd
 For each alpha[i] and each lambda[j] the soil water balance function is executed and the results stored in a nested list.
 ```{r runClimateLoop}
 # set the mortality value
+source("Rainfall.R")
 
 
 for (i in 1:length(alpha)) {
@@ -429,7 +432,7 @@ for (j in 1:length(lambda)) {
     
     sub_store[[j]] <-data.frame(alpha_o=rep(alpha[i],time),
                                 lambda_o=rep(lambda[j],time),
-                                balances(Rain,plotit=T, par=par,
+                                balances(Rain[1:10],plotit=F, par=par,
                                 soilpar, vegpar))
   }
   Store[[i]] <- sub_store
