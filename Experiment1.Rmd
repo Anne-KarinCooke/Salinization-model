@@ -43,7 +43,7 @@ Experiments in total:
 Soil properties were derived from standard Australian soils in Neurotheta (Minasny and McBratney, 2002, as cited in Shah et al, 2011).
 
 ```{r Constants}
-  # Sandy Clay Loam
+ # Sandy Clay Loam
     n<-0.367 # porosity
     # more soil variables for evaporation & losses
     # Hydraulic conductivity
@@ -61,8 +61,8 @@ Soil properties were derived from standard Australian soils in Neurotheta (Minas
   hb = psi_s_bar*-10^4
   Ep=10 # Evaporation
 
-#Z =614.25
-Z =300 # cm GROUNDWATER DEPTH
+
+  Z =100 # cm GROUNDWATER DEPTH
 
 soilpar <- list(b = b, n = n, s_fc = s_fc, K_s = K_s, 
                 psi_s_bar = psi_s_bar, h1bar = h1bar, hb = hb, Ep=Ep)
@@ -73,13 +73,26 @@ soilpar <- list(b = b, n = n, s_fc = s_fc, K_s = K_s,
     Zr = 40 # soil depth (cm)   Also Table 2...Fernandez-Illescas and Rodriguez-Iturbe...2001
     c_p=0.4
 vegpar <- list(Zr = Zr, c_p=c_p)
+
+alpha_i=0.25
+k=12
+W0=0.2
+gmax=0.05
+k1=5
+c=10
+f= 0.4
+ConcConst = 0.1
+CM.gw =0.1
+d=0.05
+
+par <- list(alpha_i=alpha_i,k=k, W0=W0, gmax=gmax, k1=k1, c=c, f=f, ConcConst=ConcConst, CM.gw= CM.gw, d=d)
 ```
 
 ## Infiltration function
 ```{r Infiltration}
-Infil <- function(h,P, alpha_i=0.25, k=12, W0=0.2){
+Infil <- function(h,P, par){
   
-  I=alpha_i*h*(P+k*W0)/(P+k)
+  I=par$alpha_i*h*(P+par$k*par$W0)/(P+par$k)
   
   return (I)
 }
@@ -87,8 +100,8 @@ Infil <- function(h,P, alpha_i=0.25, k=12, W0=0.2){
 
 ## Water uptake function
 ```{r WaterUptake}
-par_in <- list(gmax=0.05, k1=5)
-WU <- function(M,P,par=par_in){ 
+
+WU <- function(M,P,par){ 
 # using Svir in here means scaling Svir back to M, easier to do at Svir in balances  
 #  WU=par$gmax*((M*(1+Svir))/(((M*(1+Svir))+par$k1)))*P 
   WU=par$gmax*(M/((M+par$k1)))*P 
@@ -99,9 +112,8 @@ WU <- function(M,P,par=par_in){
 
 ## Plant growth function 
 ```{r Plantgrowth}
-par_in$c=10
 
-Gr <- function(M,P,par=par_in) { 
+Gr <- function(M,P,par) { 
   
   Gr = par$c*WU(M,P,par)
   
@@ -111,10 +123,10 @@ Gr <- function(M,P,par=par_in) {
 
 ## Plant mortality function 
 ```{r Mortality}
-Mo <- function(P,M,Svir,d=0.1) {
+Mo <- function(P,M,Svir,par) {
   # needs to be M/Svir because both are "large" numbers
   # you want a number ~1 for multiplication, or <0.1 for addition
-  Mo = P*(d*(M/Svir))
+  Mo = P*(par$d*(M/Svir))
   
   return(Mo)
 }
@@ -182,10 +194,9 @@ return(list(U=u,L=l))
 
 ## Soil moisture and salt balance 
 ```{r balances}
- balances <- function(Rain, par=par_in,plotit=F,
+balances <- function(Rain, par, plotit=F,
                       soilpar,
-                      vegpar,
-                      f= 0.4, ConcConst = 0.1,  CM.gw = 0.1){
+                      vegpar){
    
    # f is the soil salt leaching efficiency (whether some salt is retained)
    # ConcConst is the concentration of the salt in the infiltrating water
@@ -242,6 +253,7 @@ return(list(U=u,L=l))
 
    L_sub<-rep(0,deltat) # calculates leakage loss without evaporation loss
    U_sub<-rep(0,deltat)
+Overflow<-rep(0,deltat)
 
   
    timeincr= 1/deltat
@@ -260,11 +272,19 @@ return(list(U=u,L=l))
 
 # Balance for water depth on soil
 
-      h_sub[tt+1] <- h.old + ifelse(tt==1,Rain[t],0) - Infil(h.old, P.old)*timeincr + Overflow
+
+# if(Overflow[tt] >0){
+#       h_sub[tt+1] <- h.old + ifelse(tt==1,Rain[t],0) - Infil(h.old, P.old,par)*timeincr + Overflow[tt]
+# }
+# else{
+#     h_sub[tt+1] <- h.old + ifelse(tt==1,Rain[t],0) - Infil(h.old, P.old,par)*timeincr
+# }
+browser()
+h_sub[tt+1] <- ifelse(Overflow[tt] >0,h.old + ifelse(tt==1,Rain[t],0) - Infil(h.old, P.old,par)*timeincr + Overflow[tt],h.old + ifelse(tt==1,Rain[t],0) - Infil(h.old, P.old,par)*timeincr)
 
 # Infiltration
 
-      I_sub[tt] <- Infil(h.old, P.old)*timeincr
+      I_sub[tt] <- Infil(h.old, P.old,par)*timeincr
 
 #  1. Update soil moisture with infiltration
 
@@ -273,13 +293,12 @@ return(list(U=u,L=l))
 # Now do all plant uptake and growth
 # water uptake by plants: include infiltration in available water
 
-
       WU_sub[tt] <- WU(M=Svir.old,P.old,par)*timeincr 
       
       # growth rate
       Gr_sub[tt] <- Gr(M=Svir.old, P.old,par)*timeincr 
       # Mortality
-      Mo_sub[tt]<- Mo(P.old, M=M.old, Svir=Svir.old, d=par_in$d)*timeincr
+      Mo_sub[tt]<- Mo(P.old, M=M.old, Svir=Svir.old,par)*timeincr
       # calculate plant biomass balance
       P_sub[tt + 1] <- P.old + Gr_sub[tt]- Mo_sub[tt] 
       
@@ -289,36 +308,38 @@ return(list(U=u,L=l))
       M_sub[tt + 1] <- M.old + I_sub[tt] - WU_sub[tt] #- L_sub[tt] 
 
 # Calculate salt concentration in the soil
-      CM_sub[tt+1]<- SmM_sub[tt+1]/M_sub[tt + 1] 
-#browser()
+      CM_sub[tt]<- SmM_sub[tt]/M_sub[tt] #tt+1
+
       # 3. calculate leaching amount
-#       L_sub[tt] <- L(M_sub[tt+1], soilpar$K_s, soilpar$s_fc,soilpar$Zr,soilpar$n)*timeincr
-#    L_sub[tt] <- L_n(M=M_sub[tt],Z=Z,soilpar=soilpar,vegpar=vegpar)$L
 
-   L_sub[tt]<-do.call(L_n,list(M = M_sub[tt + 1], P = P_sub[tt + 1], Z = Z,
-                               soilpar = soilpar,vegpar = vegpar))$L 
+   L_sub[tt]<-do.call(L_n,list(M = M_sub[tt + 1], P = P_sub[tt + 1], Z = Z,soilpar = soilpar,vegpar = vegpar))$L 
    
-   U_sub[tt]<-do.call(L_n,list(M = M_sub[tt + 1],P = P_sub[tt + 1], Z = Z,
-                               soilpar = soilpar, vegpar = vegpar))$U
-   # U_sub[tt]<-do.call(L_n,list(M=M_sub[tt + 1],Z=Z,soilpar=soilpar,vegpar=vegpar))$U
-      # 4. final adjust soil moisture for leaching
-       M_sub[tt + 1] <- M_sub[tt + 1] - L_sub[tt]*timeincr + U_sub[tt]*timeincr - Overflow
+   U_sub[tt]<-do.call(L_n,list(M = M_sub[tt + 1],P = P_sub[tt + 1], Z = Z,soilpar = soilpar, vegpar = vegpar))$U
 
-  if (U_sub[tt]> soilpar$s_fc-(M_sub[tt]/(soilpar$n*soilpar$Zr))){
-     Overflow <- U_sub[tt]-(soilpar$s_fc-(M_sub[tt]/(soilpar$n*soilpar$Zr))
-  }
+## If U exceeds what fits into M, it adds to h
+  Overflow[tt] <- U_sub[tt]*timeincr-((soilpar$s_fc*(soilpar$n*vegpar$Zr))-M_sub[tt+1])
+
+      # 4. final adjust soil moisture for leaching
+# overflow onlz occurs when positive of course
+# if(Overflow[tt] >0){
+#        M_sub[tt + 1] <- M_sub[tt + 1] - L_sub[tt]*timeincr + U_sub[tt]*timeincr - Overflow[tt]
+#        }
+#   else 
+#   {
+#     M_sub[tt + 1] <- M_sub[tt + 1] - L_sub[tt]*timeincr + U_sub[tt]*timeincr
+#   }
+
+  M_sub[tt + 1] <- ifelse(Overflow[tt] >0,M_sub[tt + 1] - L_sub[tt]*timeincr + U_sub[tt]*timeincr - Overflow[tt],M_sub[tt + 1] <- M_sub[tt + 1] - L_sub[tt]*timeincr + U_sub[tt]*timeincr)
 
 # calculate saltbalance
     L_salt <- CM.old*L_sub[tt]*timeincr
-    U_salt <- CM.gw*U_sub[tt]*timeincr
+    U_salt <- par$CM.gw*U_sub[tt]*timeincr
        
-      SmI_sub[tt+1]<- SmI.old + I_sub[tt]*ConcConst - L_salt
-      SmM_sub[tt+1]<- SmI_sub[tt + 1] + U_salt
+      SmI_sub[tt+1]<- SmI.old + I_sub[tt]*par$ConcConst - L_salt
+      SmM_sub[tt+1]<- SmM_sub[tt]+ SmI_sub[tt+1] + U_salt ### think about this again 
        
 
-      
-
-#browser()
+    
     # I have now scaled Svir to M  
     Svir_sub[tt + 1]<-soilpar$n*vegpar$Zr*((soilpar$h1bar)^(1/soilpar$b))*
                      ((soilpar$h1bar)*(M_sub[tt + 1]/
@@ -333,7 +354,8 @@ return(list(U=u,L=l))
     M[t] = M_sub[deltat]
     h[t] = h_sub[deltat]
     CM[t] = CM_sub[deltat]
-    SmM[t] = SmI[t] = SmM_sub[deltat]
+    SmI[t] = SmI_sub[deltat]
+    SmM[t] = SmM_sub[deltat]
     In[t]= I_sub[deltat]
     L[t] = L_sub[deltat]
     U[t] = U_sub[deltat]
@@ -348,7 +370,7 @@ if (plotit==T) {
   plot(M, type="l",ylim=c(0,100),xlim=c(0,time),xlab=("time [d]"), main=paste("lambda=", lambda[j],"alpha=", alpha[i]))
   points(Rain*10, type="h", col="skyblue")
    
-    lines(Svir,type="l", col="blue")
+    lines(h,type="l", col="blue")
     abline(h=0, col="Gray50",lwd=2,lty=2)
 
     lines(SmM,type="l", col="red")
@@ -364,23 +386,6 @@ if (plotit==T) {
 
 Out <- data.frame(P=P,M=M,h=h, CM=CM, SmM=SmM, In=In, L=L, U=U, Svir=Svir)
 return(Out)
-}
-```
-
-source the Moisture function script
-source("MoistureFunction.R")
-source("Rainfall.R")
-
-## Rainfall function
-```{r RainfallFunction}
-
-Precip <- function(time,alpha,lambda,delta) {
-  # generate a vector of times between rainfall events > delta
-  f_P<-floor(rexp(time,lambda*exp(-delta/alpha))) # vector of times between rainfall occurrences (equation 4 & 8)
-  # generate a binary vector from this (impulse function)
-  binary.vec <- unlist(lapply(1:time,function(i) c(rep(0,f_P[i]),1)))
-  R <- rexp(length(binary.vec),1/alpha)*binary.vec 
-  return(R[1:time])
 }
 ```
 
@@ -410,7 +415,7 @@ This loop generates rainfall with the distribution properties alpha[i] and lambd
 For each alpha[i] and each lambda[j] the soil water balance function is executed and the results stored in a nested list.
 ```{r runClimateLoop}
 # set the mortality value
-par_in$d <- 0.05
+
 
 for (i in 1:length(alpha)) {
   
@@ -421,7 +426,7 @@ for (j in 1:length(lambda)) {
     
     sub_store[[j]] <-data.frame(alpha_o=rep(alpha[i],time),
                                 lambda_o=rep(lambda[j],time),
-                                balances(Rain,plotit=T, par=par_in,
+                                balances(Rain,plotit=T, par=par,
                                 soilpar=list(n=n, s_fc=s_fc, 
                                              K_s=K_s, psi_s_bar=psi_s_bar,
                                              h1bar=h1bar, b=b, Ep=Ep),
