@@ -59,10 +59,10 @@ Soil properties were derived from standard Australian soils in Neurotheta (Minas
 
   h1bar =  -psi_s_bar 
   hb = psi_s_bar*-10^4
-  Ep=10 # Evaporation
+  Ep=3.5 # Evaporation in cm
 
 
-  Z =200 # cm GROUNDWATER DEPTH
+  Z =100 # cm GROUNDWATER DEPTH
 
 soilpar <- list(b = b, n = n, s_fc = s_fc, K_s = K_s, 
                 psi_s_bar = psi_s_bar, h1bar = h1bar, hb = hb, Ep=Ep)
@@ -72,7 +72,8 @@ soilpar <- list(b = b, n = n, s_fc = s_fc, K_s = K_s,
 
     Zr = 40 # soil depth (cm)   Also Table 2...Fernandez-Illescas and Rodriguez-Iturbe...2001
     c_p=0.4
-vegpar <- list(Zr = Zr, c_p=c_p)
+    fr= 0.8 # fraction of roots near gw table
+vegpar <- list(Zr = Zr, c_p=c_p, fr=fr)
 
 alpha_i=0.25
 k=12
@@ -157,16 +158,23 @@ L_n <- function(M,Z,WU,soilpar,vegpar) {
 
   s=M/(soilpar$n*Zr)
 
-  # capillary upflow
-  G1 <- G(soilpar$b,hb,Z) # using the G function 
-  u_set <- s[s < soilpar$s_fc]
-  
- 
-    # UpT=G1*K_s*(1-exp(-c*P))*Ep
-  
 
-  u <- c(rep(G1*soilpar$K_s*(1-exp(-(vegpar$c_p*WU)))*soilpar$Ep,length(u_set)),rep(0,(length(M)-length(u_set))))
-   # u <- c(rep(G1*K_s,length(u_set)),rep(0,(length(M)-length(u_set))))
+  # capillary upflow
+
+  G1 <- G(soilpar$b,hb,Z) # using the G function 
+
+  u_set <- s[s < soilpar$s_fc]
+
+    # UpT=G1*K_s*(1-exp(-c*P))*Ep
+
+
+ #u <- c(rep(s*(1-exp(-vegpar$fr*G1*K_s*WU))*soilpar$Ep,length(u_set)),rep(0,(length(M)-length(u_set))))
+
+
+#u<- c(rep((soilpar$Ep+WU)/(1+exp((-soilpar$s_fc-s))*(G1*K_s))),length(u_set),rep(0,(length(M)-length(u_set))))
+      u <- c(rep(G1*K_s*(1-exp(-(vegpar$fr*WU)))*soilpar$Ep,length(u_set)),rep(0,(length(M)-length(u_set)))) # original
+ #      u <- c(rep(G1*K_s*(1-exp(-(vegpar$c_p*WU)))*soilpar$Ep,length(u_set)),rep(0,(length(M)-length(u_set)))) # original 
+ #  u <- c(rep(G1*K_s,length(u_set)),rep(0,(length(M)-length(u_set))))
   # leaching
   #ifelse(soilpar$s_fc>n,soilpar$s_fc<-soilpar$s_fc,soilpar$s_fc<-n)
   #l <- M*exp(-((soilpar$s_fc-(M/(Zr*soilpar$n)))*K_s/(Zr*soilpar$n)))
@@ -175,11 +183,12 @@ L_n <- function(M,Z,WU,soilpar,vegpar) {
 return(list(U=u,L=l))
 }
 
-# test
+####test
 #  M <- seq(0,10,length=100)
-#  Z <- 1000
-# plot(M,L_n(M,Z,P=10,soilpar=soilpar,vegpar=vegpar)$L,type="l",ylim=c(0,10))
-# lines(M,L_n(M,Z,P=10,soilpar=soilpar,vegpar=vegpar)$U,col="red")
+# 
+#  Z <- 100
+# plot(M,L_n(M,Z,WU=5,soilpar=soilpar,vegpar=vegpar)$L,type="l",ylim=c(0,10))
+# lines(M,L_n(M,Z,WU=5,soilpar=soilpar,vegpar=vegpar)$U,col="red")
 ```
 
 ## Leaching function 
@@ -214,9 +223,10 @@ balances <- function(Rain, par, plotit=T,
    In <- rep(0,length(Rain)) # infiltration [mm]
 # Leach <- rep(0,length(Rain)) # leaching [mm]
    Svir <- rep(0,length(Rain)) # virtual saturation
-  # Overfl<-rep(0,length(Rain))
+    Overfl<-rep(0,length(Rain))
    L<- rep(0,length(Rain))
    U<- rep(0,length(Rain))
+  Overfl<- rep(0,length(Rain))
 
 
 # Initial values to start the simulation.
@@ -248,13 +258,11 @@ balances <- function(Rain, par, plotit=T,
    SmI_sub <- rep(0,deltat) 
    SmM_sub<- rep(0,deltat) 
    CM_sub<- rep(0,deltat) 
-   # Posm_bar<- rep(0,deltat) # osmotic pressure of soil water in bar
-   # fosm<- rep(0,deltat) # "osmotic factor", reduces available soil water to plant water uptake
   Svir_sub <- rep(0,deltat) # virtual saturation
 
    L_sub<-rep(0,deltat) # calculates leakage loss without evaporation loss
    U_sub<-rep(0,deltat)
-   # Overflow<-rep(0,deltat)
+   Overflow<-rep(0,deltat)
 
 
   
@@ -270,21 +278,13 @@ balances <- function(Rain, par, plotit=T,
       SmI.old <-ifelse(tt==1,SmI[t-1],SmI_sub[tt])
       CM.old <-ifelse(tt==1,CM[t-1],CM_sub[tt])
      Svir.old <-ifelse(tt==1,Svir[t-1],Svir_sub[tt])
- #     Overfl.old <-ifelse(tt==1,Overfl[t-1],Overflow[tt])
-#browser()
+    Overfl.old <-ifelse(tt==1,Overfl[t-1],Overflow[tt])
+
 # Balance for water depth on soil
 
-
-# if(Overflow[tt] >0){
-#       h_sub[tt+1] <- h.old + ifelse(tt==1,Rain[t],0) - Infil(h.old, P.old,par)*timeincr + Overflow[tt]
-# }
-# else{
-#     h_sub[tt+1] <- h.old + ifelse(tt==1,Rain[t],0) - Infil(h.old, P.old,par)*timeincr
-# }
-
 #  h_sub[tt+1] <- h.old + ifelse(tt==1,Rain[t],0) - Infil(h.old, P.old,par)*timeincr
-h_sub[tt+1] <- h.old + ifelse(tt==1,Rain[t],0) - Infil(h.old, P.old,par)*timeincr
-    #ifelse(Overfl.old >0,h.old + ifelse(tt==1,Rain[t],0) - Infil(h.old, P.old,par)*timeincr + Overfl.old,h.old + ifelse(tt==1,Rain[t],0) - Infil(h.old, P.old,par)*timeincr)
+h_sub[tt+1] <- h.old + ifelse(tt==1,Rain[t],0) - Infil(h.old, P.old,par)*timeincr #- Ep*timeincr
+#       ifelse(Overfl.old >0,h.old + ifelse(tt==1,Rain[t],0) - Infil(h.old, P.old,par)*timeincr + Overfl.old ,h.old + ifelse(tt==1,Rain[t],0) - Infil(h.old, P.old,par)*timeincr)
 
 # Infiltration
 
@@ -312,7 +312,7 @@ h_sub[tt+1] <- h.old + ifelse(tt==1,Rain[t],0) - Infil(h.old, P.old,par)*timeinc
       M_sub[tt + 1] <- M.old + I_sub[tt] - WU_sub[tt] #- L_sub[tt] 
 
 # Calculate salt concentration in the soil
-      CM_sub[tt+1]<- SmM_sub[tt+1]/M_sub[tt+1] #tt+1
+
 
       # 3. calculate leaching amount
 
@@ -324,27 +324,23 @@ h_sub[tt+1] <- h.old + ifelse(tt==1,Rain[t],0) - Infil(h.old, P.old,par)*timeinc
 #  Overflow[tt+1] <- (U_sub[tt]*timeincr-L_sub[tt]*timeincr)-((soilpar$s_fc*(soilpar$n*vegpar$Zr))-M_sub[tt+1])
 
       # 4. final adjust soil moisture for leaching
-# overflow onlz occurs when positive of course
-# if(Overflow[tt] >0){
-#        M_sub[tt + 1] <- M_sub[tt + 1] - L_sub[tt]*timeincr + U_sub[tt]*timeincr - Overflow[tt]
-#        }
-#   else 
-#   {
-#     M_sub[tt + 1] <- M_sub[tt + 1] - L_sub[tt]*timeincr + U_sub[tt]*timeincr
-#   }
 
-  M_sub[tt + 1] <- M_sub[tt + 1] - L_sub[tt]*timeincr + U_sub[tt]*timeincr 
-    #ifelse(Overflow[tt+1] >0,M_sub[tt + 1] - L_sub[tt]*timeincr + U_sub[tt]*timeincr - Overflow[tt], M_sub[tt + 1] - L_sub[tt]*timeincr + U_sub[tt]*timeincr)
-#  U_sub[tt] <- ifelse(Overflow[tt+1] >0,U_sub[tt] - Overflow[tt+1]/timeincr, U_sub[tt]) 
+
+ Overflow[tt+1] <- (U_sub[tt]*timeincr)-((soilpar$s_fc*(soilpar$n*vegpar$Zr))-M_sub[tt+1])
+# U_sub[tt] <- ifelse(Overflow[tt] >0,U_sub[tt]- Overflow[tt], U_sub[tt]) 
+#   M_sub[tt + 1] <-  M_sub[tt + 1] + U_sub[tt]*timeincr - L_sub[tt]*timeincr
+
+  M_sub[tt + 1] <- ifelse(Overflow[tt+1] >0,M_sub[tt + 1] - L_sub[tt]*timeincr + U_sub[tt]*timeincr - Overflow[tt+1], M_sub[tt + 1] - L_sub[tt]*timeincr + U_sub[tt]*timeincr)
+
 
 # calculate saltbalance
-    L_salt <- CM.old*L_sub[tt]*timeincr
+    L_salt <- par$f*CM_sub[tt+1]*L_sub[tt]*timeincr
     U_salt <- par$CM.gw*U_sub[tt]*timeincr
        
       SmI_sub[tt+1]<- SmI.old + I_sub[tt]*par$ConcConst 
-      SmM_sub[tt+1]<- SmI_sub[tt+1] + U_salt - L_salt ### think about this again 
-       
-
+      #SmM_sub[tt+1]<- ifelse(Overfl.old[tt+1] >0, SmI_sub[tt+1] + U_salt - L_salt - Overfl.old[tt+1]*CM.old, SmI_sub[tt+1] + U_salt - L_salt)
+       SmM_sub[tt+1]<-SmI_sub[tt+1] + U_salt - L_salt
+   CM_sub[tt+1]<- SmM_sub[tt+1]/M_sub[tt+1]
     
     # I have now scaled Svir to M  
     Svir_sub[tt + 1]<-soilpar$n*vegpar$Zr*((soilpar$h1bar)^(1/soilpar$b))*
@@ -381,7 +377,7 @@ if (plotit==T) {
 
     lines(SmM,type="l", col="red")
     lines(CM,type="l", col="purple")
-    lines(P,type="l", col="green")
+    lines(P/10,type="l", col="green")
 #     lines(L,type="l", col="green")
 #     lines(U,type="l", col="red")
 #  legend("topright",cex=1, pt.cex=0.4, c("Moisture [mm]","Rainfall [mm]*10","overland flow depth[mm] ","salt mass in soil water [g]", "salt concentration in soil water [g/l]", "Plant biomass density [g/m^2]"),
@@ -476,6 +472,6 @@ pa
 summary(lambda_sum$P)
 summary(lambda_sum$M)
 summary(lambda_sum$U)
-
+summary(lambda_sum$L)
 
 ```
