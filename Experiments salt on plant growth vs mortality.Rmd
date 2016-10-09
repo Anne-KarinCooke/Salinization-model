@@ -1,0 +1,794 @@
+---
+title: 'Experiments comparing salt influence on salt growth vs salt mortality'
+author: 'Anne-Karin Cooke'
+output: html_document
+---
+
+# Experiments          
+This version conducts a comparison experiment on the influence of salinity on the vegetation functions.
+Questions we ask:
+- Does it lead to significant differences if salinity impacts are only addressed in the biomass growth function or
+only in the mortality function or in both. This will be conducted including the virtual saturation which considers both matric and osmotic effects
+in opposite to only using a non-salt related general constant.
+Further, this shall be investigated for 4 different climates, each consisting of a combination high and low alpha and lambda, respectively.
+
+1. alpha=0.6, lambda=0.1 # dry
+2. alpha=1.5, lambda=0.1
+3. alpha=1.5, lambda=1.0
+4. alpha=0.6, lambda=1.0 # wet
+
+In this version, Sandy Clay Loam was used (instead of coarse sand before)
+First, a deep groundwater table was assumed, Z=1000 cm.
+
+Experiments :
+
+# Experiment 1: Salt on growth
+-for climates 1-4
+-with deep gw, Z=1000 cm
+-with high gw, Z =100 cm  # NOT YET
+
+# Experiment 2: Salt on mortality
+-for climates 1-4
+-with deep gw, Z=1000 cm
+-with high gw, Z =100 cm # NOT YET
+
+
+##Constants
+
+Soil properties were derived from standard Australian soils in Neurotheta (Minasny and McBratney, 2002, as cited in Shah et al, 2011).
+
+```{r Constants}
+setwd("H:/R/10 10 16")
+ # Sandy Clay Loam
+    n<-0.367 # porosity
+    # more soil variables for evaporation & losses
+    # Hydraulic conductivity
+    K_s<-52.08*10 # mm/day
+    # campbell's b
+    b<-6.4069 # neurotheta sandy clay loam
+    # van Genuchten parameters
+#     avg <- 0.0521
+#     nvg <- 1.237
+    s_fc<-0.2677/n # Field capacity
+    # This is the bubbling pressure
+    psi_s_bar<--1.2E-3 #
+
+  h1bar =  -psi_s_bar 
+  hb = psi_s_bar*-10^4
+  Ep=3.5 # Evaporation in cm
+
+
+  Z =1000 # cm GROUNDWATER DEPTH
+
+soilpar <- list(b = b, n = n, s_fc = s_fc, K_s = K_s, 
+                psi_s_bar = psi_s_bar, h1bar = h1bar, hb = hb, Ep=Ep)
+    #................................................
+    # Vegetation 1 (Grass)
+    # paspalum secateum F-I and R-I, 2004
+
+    Zr = 40 # soil depth (cm)   Also Table 2...Fernandez-Illescas and Rodriguez-Iturbe...2001
+    c_p=0.4
+    fr= 0.8 # fraction of roots near gw table
+vegpar <- list(Zr = Zr, c_p=c_p, fr=fr)
+
+alpha_i=0.25
+k=12
+W0=0.2
+gmax=0.05
+k1=5
+c=10
+f= 0.4
+ConcConst = 0.1
+CM.gw =0
+d=0.05
+
+par <- list(alpha_i=alpha_i,k=k, W0=W0, gmax=gmax, k1=k1, c=c, f=f, ConcConst=ConcConst, CM.gw= CM.gw, d=d)
+```
+
+## Infiltration function
+```{r Infiltration}
+Infil <- function(h,P, par){
+  
+  I=par$alpha_i*h*(P+par$k*par$W0)/(P+par$k)
+  
+  return (I)
+}
+```
+
+## Water uptake function
+```{r WaterUptake}
+
+WU <- function(M,P,par){ 
+# using Svir in here means scaling Svir back to M, easier to do at Svir in balances  
+#  WU=par$gmax*((M*(1+Svir))/(((M*(1+Svir))+par$k1)))*P 
+  WU=par$gmax*(M/((M+par$k1)))*P 
+  
+  return(WU)
+}
+```
+
+
+## G function (Eagelson 1978)
+```{r Gfunction}
+G <- function(b,hb,Z) {
+  b1 <- 2+3/b
+  a1 <- 1+(3/2)/(b1-1)
+  H1 <- a1*(hb/Z)^b1
+  return(H1)
+}
+# test
+# G(b=soilpar$b,hb=soilpar$hb, Z=Z)
+
+```
+
+
+```{r VerticalFlux}
+#******************************************
+L_n <- function(M,Z,WU,soilpar,vegpar) {
+   Zr <- vegpar$Zr
+   hb <- soilpar$psi_s_bar*-10^4
+   #browser()
+   soilpar$s_fc <- (Z/hb)^(-1/soilpar$b)
+
+
+  s=M/(soilpar$n*Zr)
+
+
+  # capillary upflow
+
+  G1 <- G(soilpar$b,hb,Z) # using the G function 
+
+  u_set <- s[s < soilpar$s_fc]
+
+    # UpT=G1*K_s*(1-exp(-c*P))*Ep
+
+
+ #u <- c(rep(s*(1-exp(-vegpar$fr*G1*K_s*WU))*soilpar$Ep,length(u_set)),rep(0,(length(M)-length(u_set))))
+
+
+#u<- c(rep((soilpar$Ep+WU)/(1+exp((-soilpar$s_fc-s))*(G1*K_s))),length(u_set),rep(0,(length(M)-length(u_set))))
+      u <- c(rep(G1*K_s*(1-exp(-(vegpar$fr*WU)))*soilpar$Ep,length(u_set)),rep(0,(length(M)-length(u_set)))) # original
+ #      u <- c(rep(G1*K_s*(1-exp(-(vegpar$c_p*WU)))*soilpar$Ep,length(u_set)),rep(0,(length(M)-length(u_set)))) # original 
+ #  u <- c(rep(G1*K_s,length(u_set)),rep(0,(length(M)-length(u_set))))
+  # leaching
+  #ifelse(soilpar$s_fc>n,soilpar$s_fc<-soilpar$s_fc,soilpar$s_fc<-n)
+  #l <- M*exp(-((soilpar$s_fc-(M/(Zr*soilpar$n)))*K_s/(Zr*soilpar$n)))
+    l<- ((soilpar$s_fc*n*Zr)/(1+exp((soilpar$s_fc-(M/(Zr*soilpar$n)))*(K_s/(Zr*soilpar$n)))))
+  #browser()
+return(list(U=u,L=l))
+}
+
+####test
+#  M <- seq(0,10,length=100)
+# 
+#  Z <- 100
+# plot(M,L_n(M,Z,WU=5,soilpar=soilpar,vegpar=vegpar)$L,type="l",ylim=c(0,10))
+# lines(M,L_n(M,Z,WU=5,soilpar=soilpar,vegpar=vegpar)$U,col="red")
+```
+
+## Leaching function 
+```{r OldLeaching}
+# L <- function(M,K_s,s_fc,Zr_in=Zr,n_1=n) {
+#   
+#   L=M*exp(-((s_fc-M/(Zr_in*n_1))*K_s/(Zr_in*n_1)))
+#   
+#   return(L)
+# }
+
+```
+
+##Experiment 1: Salt on Growth, not on mortality
+
+# Salt influence on Plant growth function only, not on mortality
+
+```{r Plant growth}
+
+Gr <- function(M,P,par) { 
+  
+  Gr = par$c*WU(M,P,par)
+  
+  return(Gr)
+}
+```
+
+## Plant mortality function WITHOUT SALT INFLUENCE, NO VIRTUAL SATURATION
+Plant mortality is just reduced by the linear constant d
+```{r PLANT Mortality}
+Mo <- function(P,M,par) {
+ 
+    Mo = P*(par$d*M)
+  
+  return(Mo)
+}
+```
+
+```{r }
+balances <- function(Rain, par, plotit=T,
+                      soilpar,
+                      vegpar){
+   
+   # f is the soil salt leaching efficiency (whether some salt is retained)
+   # ConcConst is the concentration of the salt in the infiltrating water
+
+# Storage vectors for the daily steps are initialized.
+
+
+   M <- rep(0,length(Rain)) # soil moisture [mm]
+   h <- rep(0,length(Rain)) # infiltration depth [mm]
+   P <- rep(0,length(Rain)) #biomass density []
+   CM<- rep(0,length(Rain)) # Salt concentration in soil water in g/L or g/mm
+   SmI<- rep(0,length(Rain)) # Salt mass in infiltrating water [g]
+   SmM <- rep(0,length(Rain)) # Salt mass in soil water [g]
+   In <- rep(0,length(Rain)) # infiltration [mm]
+# Leach <- rep(0,length(Rain)) # leaching [mm]
+   Svir <- rep(0,length(Rain)) # virtual saturation
+    Overfl<-rep(0,length(Rain))
+   L<- rep(0,length(Rain))
+   U<- rep(0,length(Rain))
+  Overfl<- rep(0,length(Rain))
+
+
+# Initial values to start the simulation.
+
+   
+   M[1] <- 3
+   h[1] <- 10 
+   P[1] <- 3
+   CM[1]<- 0
+   Svir[1] <- M[1]
+
+
+
+# We decided to split the numerical calculations for the daily into 12 substeps.
+
+   deltat <- 12 # split in 12 increments
+
+  
+# Storage vectors for the substeps are initialized.
+
+   M_sub <- rep(0,deltat)
+   h_sub <- rep(0,deltat)
+   I_sub <- rep(0,deltat)
+   #Q_sub <- rep(0,deltat)
+   WU_sub <-rep(0,deltat) # Water uptake in mm
+   P_sub <- rep(0,deltat) 
+   Gr_sub <- rep(0,deltat) # Growth of biomass
+   Mo_sub<- rep(0,deltat) # Mortality of biomass
+   SmI_sub <- rep(0,deltat) 
+   SmM_sub<- rep(0,deltat) 
+   CM_sub<- rep(0,deltat) 
+  Svir_sub <- rep(0,deltat) # virtual saturation
+
+   L_sub<-rep(0,deltat) # calculates leakage loss without evaporation loss
+   U_sub<-rep(0,deltat)
+   Overflow<-rep(0,deltat)
+
+
+  
+   timeincr= 1/deltat
+   
+  for (t in 2:length(Rain)){
+    
+    for (tt in 1:(deltat-1)) {
+      
+      h.old <- ifelse(tt==1,h[t-1],h_sub[tt])
+      P.old <- ifelse(tt==1,P[t-1],P_sub[tt])
+      M.old <- ifelse(tt==1,M[t-1],M_sub[tt])
+      SmI.old <-ifelse(tt==1,SmI[t-1],SmI_sub[tt])
+      CM.old <-ifelse(tt==1,CM[t-1],CM_sub[tt])
+      Svir.old <-ifelse(tt==1,Svir[t-1],Svir_sub[tt])
+      Overfl.old <-ifelse(tt==1,Overfl[t-1],Overflow[tt])
+
+# Balance for water depth on soil
+
+#  h_sub[tt+1] <- h.old + ifelse(tt==1,Rain[t],0) - Infil(h.old, P.old,par)*timeincr
+h_sub[tt+1] <- h.old + ifelse(tt==1,Rain[t],0) - Infil(h.old, P.old,par)*timeincr #- Ep*timeincr
+#       ifelse(Overfl.old >0,h.old + ifelse(tt==1,Rain[t],0) - Infil(h.old, P.old,par)*timeincr + Overfl.old ,h.old + ifelse(tt==1,Rain[t],0) - Infil(h.old, P.old,par)*timeincr)
+
+# Infiltration
+
+      I_sub[tt] <- Infil(h.old, P.old,par)*timeincr
+
+#  1. Update soil moisture with infiltration
+
+      M_sub[tt + 1] <- M.old + I_sub[tt]      
+      
+# Now do all plant uptake and growth
+# water uptake by plants: include infiltration in available water
+
+      WU_sub[tt] <- WU(M=Svir.old,P.old,par)*timeincr 
+      
+      # growth rate
+      Gr_sub[tt] <- Gr(M=Svir.old, P.old,par)*timeincr 
+      # Mortality
+      Mo_sub[tt]<- Mo(P.old, M=M.old,par)*timeincr
+      # calculate plant biomass balance
+      P_sub[tt + 1] <- P.old + Gr_sub[tt]- Mo_sub[tt] 
+      
+      
+# re-calculate water balance
+# 2. before leaching
+      M_sub[tt + 1] <- M.old + I_sub[tt] - WU_sub[tt] #- L_sub[tt] 
+
+# Calculate salt concentration in the soil
+
+
+      # 3. calculate leaching amount
+
+   L_sub[tt]<-do.call(L_n,list(M = M_sub[tt + 1], WU = WU_sub[tt + 1], Z = Z,soilpar = soilpar,vegpar = vegpar))$L 
+   
+   U_sub[tt]<-do.call(L_n,list(M = M_sub[tt + 1],WU = WU_sub[tt + 1], Z = Z,soilpar = soilpar, vegpar = vegpar))$U
+#browser()
+## If U exceeds what fits into M, it adds to h
+#  Overflow[tt+1] <- (U_sub[tt]*timeincr-L_sub[tt]*timeincr)-((soilpar$s_fc*(soilpar$n*vegpar$Zr))-M_sub[tt+1])
+
+      # 4. final adjust soil moisture for leaching
+
+
+ Overflow[tt+1] <- (U_sub[tt]*timeincr)-((soilpar$s_fc*(soilpar$n*vegpar$Zr))-M_sub[tt+1])
+# U_sub[tt] <- ifelse(Overflow[tt] >0,U_sub[tt]- Overflow[tt], U_sub[tt]) 
+   M_sub[tt + 1] <-  M_sub[tt + 1] + U_sub[tt]*timeincr - L_sub[tt]*timeincr
+
+  # M_sub[tt + 1] <- ifelse(Overflow[tt+1] >0,M_sub[tt + 1] - L_sub[tt]*timeincr + U_sub[tt]*timeincr - Overflow[tt+1], M_sub[tt + 1] - L_sub[tt]*timeincr + U_sub[tt]*timeincr)
+
+
+# calculate saltbalance
+    L_salt <- par$f*CM_sub[tt+1]*L_sub[tt]*timeincr
+    U_salt <- par$CM.gw*U_sub[tt]*timeincr
+       
+      SmI_sub[tt+1]<- SmI.old + I_sub[tt]*par$ConcConst 
+      #SmM_sub[tt+1]<- ifelse(Overfl.old[tt+1] >0, SmI_sub[tt+1] + U_salt - L_salt - Overfl.old[tt+1]*CM.old, SmI_sub[tt+1] + U_salt - L_salt)
+       SmM_sub[tt+1]<-SmI_sub[tt+1] + U_salt - L_salt
+   CM_sub[tt+1]<- SmM_sub[tt+1]/M_sub[tt+1]
+    
+    # I have now scaled Svir to M  
+    Svir_sub[tt + 1]<-soilpar$n*vegpar$Zr*((soilpar$h1bar)^(1/soilpar$b))*
+                     ((soilpar$h1bar)*(M_sub[tt + 1]/
+                       (soilpar$n*vegpar$Zr))^(-soilpar$b)
+                       +(3.6*CM_sub[tt + 1]))^(-1/soilpar$b)
+
+    } 
+  
+# Aggregating the substep results to daily values.
+
+    P[t] = P_sub[deltat]
+    M[t] = M_sub[deltat]
+    h[t] = h_sub[deltat]
+    CM[t] = CM_sub[deltat]
+    SmI[t] = SmI_sub[deltat]
+    SmM[t] = SmM_sub[deltat]
+    In[t]= sum(I_sub)
+    L[t] = sum(L_sub)
+    U[t] = sum(U_sub)
+    Svir[t] = Svir_sub[deltat]
+ #   Overfl[t] = Overflow[deltat]
+}
+
+
+# Plotting
+ 
+if (plotit==T) {  
+  plot(M, type="l",ylim=c(0,100),xlim=c(0,time),xlab=("time [d]"), main=paste("Exp 1  lambda=", lambda[j],"alpha=", alpha[i]))
+  points(Rain*10, type="h", col="skyblue")
+   
+    lines(h,type="l", col="blue")
+    abline(h=0, col="Gray50",lwd=2,lty=2)
+
+    lines(SmM,type="l", col="red")
+    lines(CM,type="l", col="purple")
+    lines(P,type="l", col="green")
+#     lines(L,type="l", col="green")
+#     lines(U,type="l", col="red")
+  legend("topright",cex=1, pt.cex=0.4, c("Moisture [mm]","Rainfall [mm]*10","overland flow depth[mm] ","salt mass in soil water [g]", "salt concentration in soil water [g/l]", "Plant biomass density [g/m^2]"),
+          col=c("black","skyblue","blue","red","purple","green"),lty=1)
+#  
+
+}
+
+Out <- data.frame(P=P,M=M,h=h, CM=CM, SmM=SmM, In=In, L=L, U=U, Svir=Svir)
+return(Out)
+}
+```
+
+
+## Changing climates
+Alpha and lambda are set to low and high values, respecitively.
+```{r Variable Climates}
+alpha <- c(0.6,1.5) 
+lambda <- c(0.1,1)
+
+Store <- list()
+sub_store <- list()
+time <- 1000
+delta <- 0
+set.seed(1000)
+```
+
+This loop generates rainfall with the distribution properties alpha[i] and lambda[j].
+For each alpha[i] and each lambda[j] the soil water balance function is executed and the results stored in a nested list.
+```{r run ClimateLoop}
+# set the mortality value
+source("Rainfall.R")
+
+
+for (i in 1:length(alpha)) {
+  
+for (j in 1:length(lambda)) {
+    # generate the rainfall
+    Rain <- Precip(time,alpha[i],lambda[j],delta)
+    Rainlist <- data.frame(Precip(time,alpha[i],lambda[j],delta))
+    
+    sub_store[[j]] <-data.frame(alpha_o=rep(alpha[i],time),
+                                lambda_o=rep(lambda[j],time),
+                                balances(Rain,plotit=T, par=par,
+                                soilpar, vegpar))
+  }
+  Store[[i]] <- sub_store
+}
+```
+
+
+## Results of Experiment 1
+
+
+Plotting M and P for different lambdas
+
+```{r}
+require(ggplot2)
+lambda_sum <- do.call(rbind,Store[][[2]])
+lambda_sum$time <- rep(1:time,length(lambda))
+
+pl <- ggplot(lambda_sum,aes(x=time,y=P, colour="P (plant biomass density [gm-2])")) + geom_line()
+pl  <- pl + geom_line(aes(x=time,y=M, colour="Moisture"))  
+pl <- pl +  facet_wrap(~lambda_o)   #, colour=lambda_o (put this in aes-brackets) 
+pl  + ggtitle("Plant biomass P and soilmoisture M for varying lambdas - Experiment 1") +  geom_line(aes(x=time, y=SmM, colour= "S (soil salt mg/L")) + theme(plot.title = element_text(lineheight=.8, face="bold"))
+```
+
+Plotting Soil water salt concentration for different alphas and lambdas
+
+```{r}
+lambda_sum_all <- do.call(rbind,do.call(rbind,Store))
+lambda_sum_all$time <- rep(rep(1:time,length(lambda)),length(alpha))
+
+
+pa <- ggplot(lambda_sum_all,aes(x=time,y=SmM,col=as.factor(lambda_o))) + geom_line(linetype=1) 
+# pa <- pa + + scale_color_gradient(low="blue", high="red")
+pa <- pa  + facet_wrap(~alpha_o) + ggtitle("Soil water salt mass [g] for varying alphas and lambdas - Experiment 1") + theme(plot.title = element_text(lineheight=.8, face="bold"))
+pa  
+```
+
+# Histograms for experiment 1
+```{r}
+h1P<- summary(lambda_sum$P)
+h1M <-summary(lambda_sum$M)
+h1SmM<-summary(lambda_sum$SmM)
+h1CM<-summary(lambda_sum$CM)
+
+hist(h1P, breaks=10, main = 'Plant biomass Experiment 1')
+hist(h1M, breaks=10,main="Soil moisture Exp 1")
+hist(h1SmM, breaks=10,main="soil salt mass Exp 1")
+hist(h1CM, breaks=10, main="Salt concentration in soil Exp 1")
+``` 
+
+
+##Experiment 2, Salt on Mortality
+
+# Salt influence on plant mortality, not on growth function
+
+```{r Plantgrowth}
+
+Gr <- function(M,P,par) { 
+  
+  Gr = par$c*WU(M,P,par)
+  
+  return(Gr)
+}
+```
+
+# Plant mortality function WITH SALT INFLUENCE, WITH VIRTUAL SATURATION
+```{r Mortality}
+Mo <- function(P,M,Svir,par) {
+  # needs to be M/Svir because both are "large" numbers
+  # you want a number ~1 for multiplication, or <0.1 for addition
+  Mo = P*(par$d*(M/Svir))
+  
+  return(Mo)
+
+}
+```
+
+```{r balances}
+balances <- function(Rain, par, plotit=T,
+                      soilpar,
+                      vegpar){
+   
+   # f is the soil salt leaching efficiency (whether some salt is retained)
+   # ConcConst is the concentration of the salt in the infiltrating water
+
+# Storage vectors for the daily steps are initialized.
+
+
+   M <- rep(0,length(Rain)) # soil moisture [mm]
+   h <- rep(0,length(Rain)) # infiltration depth [mm]
+   P <- rep(0,length(Rain)) #biomass density []
+   CM<- rep(0,length(Rain)) # Salt concentration in soil water in g/L or g/mm
+   SmI<- rep(0,length(Rain)) # Salt mass in infiltrating water [g]
+   SmM <- rep(0,length(Rain)) # Salt mass in soil water [g]
+   In <- rep(0,length(Rain)) # infiltration [mm]
+# Leach <- rep(0,length(Rain)) # leaching [mm]
+   Svir <- rep(0,length(Rain)) # virtual saturation
+    Overfl<-rep(0,length(Rain))
+   L<- rep(0,length(Rain))
+   U<- rep(0,length(Rain))
+  Overfl<- rep(0,length(Rain))
+
+
+# Initial values to start the simulation.
+
+   
+   M[1] <- 3
+   h[1] <- 10 
+   P[1] <- 3
+   CM[1]<- 0
+   Svir[1] <- M[1]
+
+
+
+# We decided to split the numerical calculations for the daily into 12 substeps.
+
+   deltat <- 12 # split in 12 increments
+
+  
+# Storage vectors for the substeps are initialized.
+
+   M_sub <- rep(0,deltat)
+   h_sub <- rep(0,deltat)
+   I_sub <- rep(0,deltat)
+   #Q_sub <- rep(0,deltat)
+   WU_sub <-rep(0,deltat) # Water uptake in mm
+   P_sub <- rep(0,deltat) 
+   Gr_sub <- rep(0,deltat) # Growth of biomass
+   Mo_sub<- rep(0,deltat) # Mortality of biomass
+   SmI_sub <- rep(0,deltat) 
+   SmM_sub<- rep(0,deltat) 
+   CM_sub<- rep(0,deltat) 
+  Svir_sub <- rep(0,deltat) # virtual saturation
+
+   L_sub<-rep(0,deltat) # calculates leakage loss without evaporation loss
+   U_sub<-rep(0,deltat)
+   Overflow<-rep(0,deltat)
+
+
+  
+   timeincr= 1/deltat
+   
+  for (t in 2:length(Rain)){
+    
+    for (tt in 1:(deltat-1)) {
+      
+      h.old <- ifelse(tt==1,h[t-1],h_sub[tt])
+      P.old <- ifelse(tt==1,P[t-1],P_sub[tt])
+      M.old <- ifelse(tt==1,M[t-1],M_sub[tt])
+      SmI.old <-ifelse(tt==1,SmI[t-1],SmI_sub[tt])
+      CM.old <-ifelse(tt==1,CM[t-1],CM_sub[tt])
+     Svir.old <-ifelse(tt==1,Svir[t-1],Svir_sub[tt])
+    Overfl.old <-ifelse(tt==1,Overfl[t-1],Overflow[tt])
+
+# Balance for water depth on soil
+
+#  h_sub[tt+1] <- h.old + ifelse(tt==1,Rain[t],0) - Infil(h.old, P.old,par)*timeincr
+h_sub[tt+1] <- h.old + ifelse(tt==1,Rain[t],0) - Infil(h.old, P.old,par)*timeincr #- Ep*timeincr
+#       ifelse(Overfl.old >0,h.old + ifelse(tt==1,Rain[t],0) - Infil(h.old, P.old,par)*timeincr + Overfl.old ,h.old + ifelse(tt==1,Rain[t],0) - Infil(h.old, P.old,par)*timeincr)
+
+# Infiltration
+
+      I_sub[tt] <- Infil(h.old, P.old,par)*timeincr
+
+#  1. Update soil moisture with infiltration
+
+      M_sub[tt + 1] <- M.old + I_sub[tt]      
+      
+# Now do all plant uptake and growth
+# water uptake by plants: include infiltration in available water
+
+      WU_sub[tt] <- WU(M=M.old,P.old,par)*timeincr 
+      
+      # growth rate
+      Gr_sub[tt] <- Gr(M=M.old, P.old,par)*timeincr 
+      # Mortality
+      Mo_sub[tt]<- Mo(P.old, M=M.old, Svir=Svir.old, par)*timeincr
+      # calculate plant biomass balance
+      P_sub[tt + 1] <- P.old + Gr_sub[tt]- Mo_sub[tt] 
+      
+      
+# re-calculate water balance
+# 2. before leaching
+      M_sub[tt + 1] <- M.old + I_sub[tt] - WU_sub[tt] #- L_sub[tt] 
+
+# Calculate salt concentration in the soil
+
+
+      # 3. calculate leaching amount
+
+   L_sub[tt]<-do.call(L_n,list(M = M_sub[tt + 1], WU = WU_sub[tt + 1], Z = Z,soilpar = soilpar,vegpar = vegpar))$L 
+   
+   U_sub[tt]<-do.call(L_n,list(M = M_sub[tt + 1],WU = WU_sub[tt + 1], Z = Z,soilpar = soilpar, vegpar = vegpar))$U
+#browser()
+## If U exceeds what fits into M, it adds to h
+#  Overflow[tt+1] <- (U_sub[tt]*timeincr-L_sub[tt]*timeincr)-((soilpar$s_fc*(soilpar$n*vegpar$Zr))-M_sub[tt+1])
+
+      # 4. final adjust soil moisture for leaching
+
+
+ Overflow[tt+1] <- (U_sub[tt]*timeincr)-((soilpar$s_fc*(soilpar$n*vegpar$Zr))-M_sub[tt+1])
+# U_sub[tt] <- ifelse(Overflow[tt] >0,U_sub[tt]- Overflow[tt], U_sub[tt]) 
+   M_sub[tt + 1] <-  M_sub[tt + 1] + U_sub[tt]*timeincr - L_sub[tt]*timeincr
+
+  # M_sub[tt + 1] <- ifelse(Overflow[tt+1] >0,M_sub[tt + 1] - L_sub[tt]*timeincr + U_sub[tt]*timeincr - Overflow[tt+1], M_sub[tt + 1] - L_sub[tt]*timeincr + U_sub[tt]*timeincr)
+
+
+# calculate saltbalance
+    L_salt <- par$f*CM_sub[tt+1]*L_sub[tt]*timeincr
+    U_salt <- par$CM.gw*U_sub[tt]*timeincr
+       
+      SmI_sub[tt+1]<- SmI.old + I_sub[tt]*par$ConcConst 
+      #SmM_sub[tt+1]<- ifelse(Overfl.old[tt+1] >0, SmI_sub[tt+1] + U_salt - L_salt - Overfl.old[tt+1]*CM.old, SmI_sub[tt+1] + U_salt - L_salt)
+       SmM_sub[tt+1]<-SmI_sub[tt+1] + U_salt - L_salt
+   CM_sub[tt+1]<- SmM_sub[tt+1]/M_sub[tt+1]
+    
+    # I have now scaled Svir to M  
+    Svir_sub[tt + 1]<-soilpar$n*vegpar$Zr*((soilpar$h1bar)^(1/soilpar$b))*
+                     ((soilpar$h1bar)*(M_sub[tt + 1]/
+                       (soilpar$n*vegpar$Zr))^(-soilpar$b)
+                       +(3.6*CM_sub[tt + 1]))^(-1/soilpar$b)
+
+    } 
+  
+# Aggregating the substep results to daily values.
+
+    P[t] = P_sub[deltat]
+    M[t] = M_sub[deltat]
+    h[t] = h_sub[deltat]
+    CM[t] = CM_sub[deltat]
+    SmI[t] = SmI_sub[deltat]
+    SmM[t] = SmM_sub[deltat]
+    In[t]= sum(I_sub)
+    L[t] = sum(L_sub)
+    U[t] = sum(U_sub)
+    Svir[t] = Svir_sub[deltat]
+ #   Overfl[t] = Overflow[deltat]
+}
+
+
+# Plotting
+ 
+if (plotit==T) {  
+  plot(M, type="l",ylim=c(0,100),xlim=c(0,time),xlab=("time [d]"), main=paste(" Exp 2  lambda=", lambda[j],"alpha=", alpha[i]))
+  points(Rain*10, type="h", col="skyblue")
+   
+    lines(h,type="l", col="blue")
+    abline(h=0, col="Gray50",lwd=2,lty=2)
+
+    lines(SmM,type="l", col="red")
+    lines(CM,type="l", col="purple")
+    lines(P,type="l", col="green")
+#     lines(L,type="l", col="green")
+#     lines(U,type="l", col="red")
+  legend("topright",cex=1, pt.cex=0.4, c("Moisture [mm]","Rainfall [mm]*10","overland flow depth[mm] ","salt mass in soil water [g]", "salt concentration in soil water [g/l]", "Plant biomass density [g/m^2]"),
+           col=c("black","skyblue","blue","red","purple","green"),lty=1)
+#  
+
+}
+
+Out <- data.frame(P=P,M=M,h=h, CM=CM, SmM=SmM, In=In, L=L, U=U, Svir=Svir)
+return(Out)
+}
+```
+
+
+## Changing climates
+Alpha and lambda are set to low and high values, respecitively.
+```{r VariableClimates}
+alpha <- c(0.6,1.5) 
+lambda <- c(0.1,1)
+
+Store <- list()
+sub_store <- list()
+time <- 1000
+delta <- 0
+set.seed(1000)
+```
+
+This loop generates rainfall with the distribution properties alpha[i] and lambda[j].
+For each alpha[i] and each lambda[j] the soil water balance function is executed and the results stored in a nested list.
+```{r runClimateLoop}
+# set the mortality value
+source("Rainfall.R")
+
+
+for (i in 1:length(alpha)) {
+  
+for (j in 1:length(lambda)) {
+    # generate the rainfall
+    Rain <- Precip(time,alpha[i],lambda[j],delta)
+    Rainlist <- data.frame(Precip(time,alpha[i],lambda[j],delta))
+    
+    sub_store[[j]] <-data.frame(alpha_o=rep(alpha[i],time),
+                                lambda_o=rep(lambda[j],time),
+                                balances(Rain,plotit=T, par=par,
+                                soilpar, vegpar))
+  }
+  Store[[i]] <- sub_store
+}
+```
+
+
+## Results Experiment 2
+
+
+Plotting M and P for different lambdas
+
+```{r}
+require(ggplot2)
+lambda_sum <- do.call(rbind,Store[][[2]])
+lambda_sum$time <- rep(1:time,length(lambda))
+
+pl <- ggplot(lambda_sum,aes(x=time,y=P, colour="P (plant biomass density [gm-2])")) + geom_line()
+pl  <- pl + geom_line(aes(x=time,y=M, colour="Moisture"))  
+pl <- pl +  facet_wrap(~lambda_o)   #, colour=lambda_o (put this in aes-brackets) 
+pl  + ggtitle("Plant biomass P and soilmoisture M for varying lambdas - Experiment 2") +  geom_line(aes(x=time, y=SmM, colour= "S (soil salt mg/L")) + theme(plot.title = element_text(lineheight=.8, face="bold"))
+```
+
+Plotting Soil water salt concentration for different alphas and lambdas
+
+```{r}
+lambda_sum_all <- do.call(rbind,do.call(rbind,Store))
+lambda_sum_all$time <- rep(rep(1:time,length(lambda)),length(alpha))
+
+
+pa <- ggplot(lambda_sum_all,aes(x=time,y=SmM,col=as.factor(lambda_o))) + geom_line(linetype=1) 
+# pa <- pa + + scale_color_gradient(low="blue", high="red")
+pa <- pa  + facet_wrap(~alpha_o) + ggtitle("Soil water salt mass [g] for varying alphas and lambdas - Experiment 2") + theme(plot.title = element_text(lineheight=.8, face="bold"))
+pa  
+```
+
+# Histograms for experiment 2
+```{r}
+
+h2P<- summary(lambda_sum$P)
+h2M <-summary(lambda_sum$M)
+h2SmM<-summary(lambda_sum$SmM)
+h2CM<-summary(lambda_sum$CM)
+
+hist(h2P, breaks=10, main = 'Plant biomass Experiment 2')
+hist(h2M, breaks=10,main="Soil moisture Exp 2")
+hist(h2SmM, breaks=10,main="soil salt mass Exp 2")
+hist(h2CM, breaks=10, main="Salt concentration in soil Exp 2")
+``` 
+
+# Comparing the distributions for exp 1 and 2
+```{r}
+par(mfrow = c(1,2))
+hist(h1P, breaks=10, freq=T, col='darkgreen', main='Comparing influence of salt on plant growth (green) vs mortality (black)', xlab='Plant biomass') 
+hist(h2P, breaks=100, freq=T, col='black', add=T)
+
+hist(h1M, breaks=10, freq=T, col='darkgreen', main='Comparing influence of salt on plant growth (green) vs mortality(black)', xlab='soil moisture') 
+hist(h2M, breaks=10, freq=T, col='black', add=T)
+
+hist(h1SmM, breaks=10, freq=T, col='darkgreen', main='Comparing influence of salt on plant growth (green) vs mortality(black)', xlab='soil salt mass') 
+hist(h2SmM, breaks=10, freq=T, col='black', add=T)
+
+hist(h1CM, breaks=10, freq=T, col='darkgreen', main='Comparing influence of salt on plant growth (green) vs mortality(black)', xlab='soil salt mass') 
+hist(h2CM, breaks=1000, freq=T, col='black', add=T)
+
+par(mfrow = c(1,2))
+hist(h1P, breaks=10, main = 'Plant biomass Experiment 1')
+hist(h2P, breaks=10, main = 'Plant biomass Experiment 2')
+hist(h1M, breaks=10,main="Soil moisture Exp 1")
+hist(h2M, breaks=10,main="Soil moisture Exp 2")
+hist(h1SmM, breaks=10,main="soil salt mass Exp 1")
+hist(h2SmM, breaks=10,main="soil salt mass Exp 2")
+hist(h1CM, breaks=10, main="Salt concentration in soil Exp 1")
+hist(h2CM, breaks=10, main="Salt concentration in soil Exp 2")
+
+```
