@@ -38,7 +38,7 @@ Experiments :
 Soil properties were derived from standard Australian soils in Neurotheta (Minasny and McBratney, 2002, as cited in Shah et al, 2011).
 
 ```{r Constants}
-setwd("H:/R/10 10 16")
+
  # Sandy Clay Loam
     n<-0.367 # porosity
     # more soil variables for evaporation & losses
