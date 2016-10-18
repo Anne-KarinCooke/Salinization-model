@@ -1,0 +1,671 @@
+
+  
+---
+title: 'Testing 3 different soil types'
+author: 'Anne-Karin Cooke'
+output: html_document
+---
+
+## Experiments          
+
+
+1. alpha=0.6, lambda=0.1 # dry
+2. alpha=1.5, lambda=0.1
+3. alpha=1.5, lambda=1.0
+4. alpha=0.6, lambda=1.0 # wet
+
+In this version, Sandy Clay Loam was used.
+
+Experiments :
+
+## Experiment 1: sandy clay loam
+-for climates 1-4
+Z = 300
+
+## Experiment 2: heavy clay
+-for climates 1-4
+Z=300
+
+## Experiment 3:  coarse sand
+-for climates 1-4
+Z= 300
+
+# Model set up
+In this model, salt enters the system through rainfall and from the groundwater table with the same concentration. (just as an example)
+
+##Constants
+
+Soil properties were derived from standard Australian soils in Neurotheta (Minasny and McBratney, 2002, as cited in Shah et al, 2011).
+
+```{r Constants}
+
+ # Sandy Clay Loam
+    n<-0.367 # porosity
+    # more soil variables for evaporation & losses
+    # Hydraulic conductivity
+    K_s<-52.08*10 # mm/day
+    # campbell's b
+    b<-6.4069 # neurotheta sandy clay loam
+    # van Genuchten parameters
+#     avg <- 0.0521
+#     nvg <- 1.237
+    s_fc<-0.2677/n # Field capacity
+    # This is the bubbling pressure
+    psi_s_bar<--1.2E-3 #
+ 
+   h1bar =  -psi_s_bar 
+   hb = psi_s_bar*-10^4
+ 
+
+  Zmax =1000 # [cm] maximum GROUNDWATER DEPTH
+  Z =300 # [cm] actual groundwater depth 
+
+# parameters describing the soil
+  soilpar <- list(b = b, n = n, s_fc = s_fc, K_s = K_s, 
+                psi_s_bar = psi_s_bar, h1bar = h1bar, hb = hb)
+    #................................................
+    # Vegetation 1 (Grass)
+    # paspalum secateum F-I and R-I, 2004
+
+    Zr = 40 # soil depth (cm)   Also Table 2...Fernandez-Illescas and Rodriguez-Iturbe...2001
+
+
+ # parameters describing the root zone   
+  vegpar <- list(Zr = Zr)
+
+
+# parameters describing plant dynamics and salt features
+
+  alpha_i=0.1 #maximum infiltration rate per day, http://www.fao.org/docrep/s8684e/s8684e0a.htm
+         
+  k=12 # Saco et al, 2013
+  W0=0.2 # Saco et al, 2013
+  gmax=0.05 # Saco et al, 2013
+  k1=5 # Saco et al, 2013
+  c=10  # Saco et al, 2013
+  f= 0.4  # f is the soil salt leaching efficiency (whether some salt is retained)
+  ConcConst = 0.1 # ConcConst is the concentration of the salt in the infiltrating water in g/l
+  CM.gw = 0.1 # salt concentration in groundwater
+  d=0.05 # fraction of plant mortality
+  
+  par <- list(alpha_i=alpha_i,k=k, W0=W0, gmax=gmax, k1=k1, c=c, f=f, ConcConst=ConcConst, CM.gw= CM.gw, d=d)
+```
+
+## Infiltration function
+```{r Infiltration}
+Infil <- function(h,P, par){
+  
+  I=par$alpha_i*h*(P+par$k*par$W0)/(P+par$k)
+  
+  return (I)
+}
+```
+
+## Water uptake function
+```{r WaterUptake}
+
+WU <- function(M,P,par){ 
+# using Svir in here means scaling Svir back to M, easier to do at Svir in balances  
+#  WU=par$gmax*((M*(1+Svir))/(((M*(1+Svir))+par$k1)))*P 
+  WU=par$gmax*(M/((M+par$k1)))*P 
+  
+  return(WU)
+}
+```
+
+
+## Vertical Flux function
+```{r VerticalFlux}
+#******************************************
+# based on Salvucci, 1993
+L_n <- function(M,Z,Zmax,soilpar,vegpar) {
+   Zr <- vegpar$Zr
+   hb <- soilpar$psi_s_bar*-10^4
+    soilpar$s_fc <- (Z/hb)^(-1/soilpar$b)
+   
+   s=M/(soilpar$n*Zr)
+   
+   psi = hb*s^soilpar$b
+   
+   m=5.64  # in Salvucci's paper it is called n, but I called it m here to not confuse it with porosity
+   #m=3.3 # 3.3 for clay, 5.64 for silt-loam, 11.88 for sand-loam 
+
+
+Znd <- Z/Zmax  # a non-dimensional Znd between 0 and 1 is defined, e.g. Zmax=10 m, Z= 1 m, Znd=0.1
+
+
+#non-dimensional form of the flow rate equation
+q <-((((Znd/hb)^-m)-((psi/hb)^-m))/((1+((psi/hb)^-m))+((m-1)*((Znd/hb)^-m)))) #nd flow rate
+
+   
+   # Mass flux
+
+
+flux <- M*q
+flux<-ifelse(s<soilpar$s_fc, abs(flux), -abs(flux))
+
+
+return(flux)
+}
+
+
+```
+
+
+##Experiment 
+
+ Salt influence on Plant growth function AND on mortality
+
+
+```{r Plantgrowth}
+
+Gr <- function(M,P,par) { 
+  
+  Gr = par$c*WU(M,P,par)
+  
+  return(Gr)
+}
+```
+
+## Plant mortality function WITH SALT INFLUENCE, WITH VIRTUAL SATURATION
+```{r Mortality}
+Mo <- function(P,M,Svir,par) {
+  # needs to be M/Svir because both are "large" numbers
+  # you want a number ~1 for multiplication, or <0.1 for addition
+  Mo = P*(par$d*(M/Svir))
+  
+  return(Mo)
+
+}
+```
+
+##  balances function
+
+
+```{r }
+balances <- function(Rain, par, plotit=T,
+                      soilpar,
+                      vegpar){
+   
+
+  
+# Storage vectors for the daily steps are initialized.
+
+   M <- rep(0,length(Rain)) # soil moisture [mm]
+   h <- rep(0,length(Rain)) # infiltration depth [mm]
+   P <- rep(0,length(Rain)) #biomass density []
+   CM<- rep(0,length(Rain)) # Salt concentration in soil water in g/L or g/mm
+   SmI<- rep(0,length(Rain)) # Salt mass in infiltrating water [g]
+   SmM <- rep(0,length(Rain)) # Salt mass in soil water [g]
+   In <- rep(0,length(Rain)) # infiltration [mm]
+
+   Svir <- rep(0,length(Rain)) # virtual saturation
+   flux<- rep(0,length(Rain)) # drainage and capillary rise flux, according to sign
+
+
+
+# Initial values to start the simulation.
+
+   
+   M[1] <- 3
+   h[1] <- 10 
+   P[1] <- 3
+   CM[1]<- 0
+   Svir[1] <- M[1]
+
+
+
+# We decided to split the numerical calculations for the daily into 12 substeps.
+
+   deltat <- 12 # split in 12 increments
+
+  
+# Storage vectors for the substeps are initialized.
+
+   M_sub <- rep(0,deltat)
+   h_sub <- rep(0,deltat)
+   I_sub <- rep(0,deltat)
+   #Q_sub <- rep(0,deltat)
+   WU_sub <-rep(0,deltat) # Water uptake in mm
+   P_sub <- rep(0,deltat) 
+   Gr_sub <- rep(0,deltat) # Growth of biomass
+   Mo_sub<- rep(0,deltat) # Mortality of biomass
+   SmI_sub <- rep(0,deltat) 
+   SmM_sub<- rep(0,deltat) 
+   CM_sub<- rep(0,deltat) 
+  Svir_sub <- rep(0,deltat) # virtual saturation
+
+   flux_sub<-rep(0,deltat) # calculates leakage loss without evaporation loss
+
+   U_salt <-rep(0,deltat)
+   L_salt <-rep(0,deltat)
+
+
+  
+   timeincr= 1/deltat
+   
+  for (t in 2:length(Rain)){
+    
+    for (tt in 1:(deltat-1)) {
+      
+      h.old <- ifelse(tt==1,h[t-1],h_sub[tt])
+      P.old <- ifelse(tt==1,P[t-1],P_sub[tt])
+      M.old <- ifelse(tt==1,M[t-1],M_sub[tt])
+      SmI.old <-ifelse(tt==1,SmI[t-1],SmI_sub[tt])
+      CM.old <-ifelse(tt==1,CM[t-1],CM_sub[tt])
+      Svir.old <-ifelse(tt==1,Svir[t-1],Svir_sub[tt])
+
+
+# Balance for water depth on soil
+
+h_sub[tt+1] <- h.old + ifelse(tt==1,Rain[t],0) - Infil(h.old, P.old,par)*timeincr #- Ep*timeincr
+
+# Infiltration
+
+      I_sub[tt] <- Infil(h.old, P.old,par)*timeincr
+
+#  1. Update soil moisture with infiltration
+
+      M_sub[tt + 1] <- M.old + I_sub[tt]      
+      
+# Now do all plant uptake and growth
+# water uptake by plants: include infiltration in available water
+
+      WU_sub[tt] <- WU(M=Svir.old,P.old,par)*timeincr 
+      
+      # growth rate
+      Gr_sub[tt] <- Gr(M=Svir.old, P.old,par)*timeincr 
+      # Mortality
+      Mo_sub[tt]<- Mo(P.old,M=M.old, Svir=Svir.old, par)*timeincr
+      # calculate plant biomass balance
+      P_sub[tt + 1] <- P.old + Gr_sub[tt]- Mo_sub[tt] 
+      
+      
+# re-calculate water balance
+# 2. before leaching
+      M_sub[tt + 1] <- M.old + I_sub[tt] - WU_sub[tt] #- L_sub[tt] 
+
+# Calculate salt concentration in the soil
+
+ # 3. calculate leaching and capillary rise amount
+  flux_sub[tt+1]<-do.call(L_n,list(M=M_sub[tt+1],Z=Z, Zmax=Zmax,soilpar=soilpar,vegpar=vegpar))
+
+# 4. final adjust soil moisture for leaching or capillary rise
+ 
+   M_sub[tt + 1] <-  M_sub[tt + 1] + flux_sub[tt+1]*timeincr
+
+
+# calculate saltbalance
+
+# Salt leaching
+    L_salt[tt+1] <- ifelse(flux_sub[tt+1]<0, par$f*CM_sub[tt+1]*flux_sub[tt+1]*timeincr,0) # leaching of salt
+
+# salt uplfow
+    U_salt[tt+1] <- ifelse(flux_sub[tt+1]>0, par$CM.gw*flux_sub[tt+1]*timeincr,0) # rise of salt
+
+# salt mass coming in with infiltration
+      SmI_sub[tt+1]<- SmI.old + I_sub[tt]*par$ConcConst 
+
+#salt mass in soil
+      SmM_sub[tt+1] <- SmI_sub[tt+1] + U_salt[tt+1] - L_salt[tt+1]
+
+# salt concentration in soil
+   CM_sub[tt+1]<- SmM_sub[tt+1]/M_sub[tt+1]
+    
+# Virtual saturation (Shah et al., 2012), here in [mm] to be in the same unit as M
+    Svir_sub[tt + 1]<-soilpar$n*vegpar$Zr*((soilpar$h1bar)^(1/soilpar$b))*
+                     ((soilpar$h1bar)*(M_sub[tt + 1]/
+                       (soilpar$n*vegpar$Zr))^(-soilpar$b)
+                       +(3.6*CM_sub[tt + 1]))^(-1/soilpar$b)
+
+    } 
+  
+# Aggregating the substep results to daily values.
+
+    P[t] = P_sub[deltat]
+    M[t] = M_sub[deltat]
+    h[t] = h_sub[deltat]
+    CM[t] = CM_sub[deltat]
+    SmM[t] = SmM_sub[deltat] 
+    SmI[t]=SmI_sub[deltat]
+    In[t]= sum(I_sub)
+    flux[t] = sum(flux_sub)
+    Svir[t] = Svir_sub[deltat]
+
+}
+
+
+# Plotting
+ 
+if (plotit==T) {  
+  plot(M, type="l",ylim=c(0,100),xlim=c(0,time),xlab=("time [d]"), main=paste("Exp 1  lambda=", lambda[j],"alpha=", alpha[i]))
+  points(Rain*10, type="h", col="skyblue")
+   
+    lines(h,type="l", col="blue")
+    abline(h=0, col="Gray50",lwd=2,lty=2)
+
+    lines(SmM,type="l", col="red")
+    lines(CM,type="l", col="purple")
+    lines(P/10,type="l", col="green")
+
+  legend("topright",cex=1, pt.cex=0.4, c("Moisture [mm]","Rainfall [mm]*10","overland flow depth[mm] ","salt mass in soil water [g]", "salt concentration in soil water [g/l]", "Plant biomass density [g/m^2]/10"),
+          col=c("black","skyblue","blue","red","purple","green"),lty=1)
+ 
+
+}
+
+Out <- data.frame(P=P,M=M,h=h, CM=CM, SmM=SmM, In=In, flux=flux, Svir=Svir)
+return(Out)
+}
+```
+
+## Changing climates
+Alpha and lambda are set to low and high values, respecitively.
+```{r VariableClimates}
+alpha <- c(0.6,1.5) 
+lambda <- c(0.1,1)
+
+Store <- list()
+sub_store <- list()
+time <- 1000
+delta <- 0
+set.seed(1000)
+```
+
+This loop generates rainfall with the distribution properties alpha[i] and lambda[j].
+For each alpha[i] and each lambda[j] the soil water balance function is executed and the results stored in a nested list.
+```{r runClimateLoop}
+#source("Rainfall.R")
+
+
+for (i in 1:length(alpha)) {
+  
+for (j in 1:length(lambda)) {
+    # generate the rainfall
+    Rain <- Precip(time,alpha[i],lambda[j],delta)
+    Rainlist <- data.frame(Precip(time,alpha[i],lambda[j],delta)) 
+    
+    sub_store[[j]] <-data.frame(alpha_o=rep(alpha[i],time),
+                                lambda_o=rep(lambda[j],time),
+                                balances(Rain,plotit=T, par=par,
+                                soilpar, vegpar))
+  }
+  Store[[i]] <- sub_store
+}
+```
+
+
+## Results Experiment 2
+
+
+Plotting M and P for different lambdas
+
+```{r}
+require(ggplot2)
+lambda_sum <- do.call(rbind,Store[][[2]])
+lambda_sum$time <- rep(1:time,length(lambda))
+
+pl <- ggplot(lambda_sum,aes(x=time,y=P, colour="P (plant biomass density [gm-2])")) + geom_line()
+pl  <- pl + geom_line(aes(x=time,y=M, colour="Moisture"))  
+pl <- pl +  facet_wrap(~lambda_o)   #, colour=lambda_o (put this in aes-brackets) 
+pl  + ggtitle("Plant biomass P and soilmoisture M for varying lambdas - Experiment 2") +  geom_line(aes(x=time, y=SmM, colour= "S (soil salt mg/L")) + theme(plot.title = element_text(lineheight=.8, face="bold"))
+```
+
+Plotting Soil water salt concentration for different alphas and lambdas
+
+```{r}
+lambda_sum_all <- do.call(rbind,do.call(rbind,Store))
+lambda_sum_all$time <- rep(rep(1:time,length(lambda)),length(alpha))
+
+
+pa <- ggplot(lambda_sum_all,aes(x=time,y=SmM,col=as.factor(lambda_o))) + geom_line(linetype=1) 
+# pa <- pa + + scale_color_gradient(low="blue", high="red")
+pa <- pa  + facet_wrap(~alpha_o) + ggtitle("Soil water salt mass [g] for varying alphas and lambdas - Experiment 2") + theme(plot.title = element_text(lineheight=.8, face="bold"))
+pa  
+```
+
+```{r}
+
+Soil1P<- lambda_sum$P
+Soil1M <-lambda_sum$M
+Soil1SmM<-lambda_sum$SmM
+Soil1CM<-lambda_sum$CM
+
+``` 
+
+## Medium heavy clay
+
+This loop generates rainfall with the distribution properties alpha[i] and lambda[j].
+For each alpha[i] and each lambda[j] the soil water balance function is executed and the results stored in a nested list.
+```{r}
+
+
+   # Medium Heavy Clay
+    n<-0.4473 # porosity
+    # more soil variables for evaporation & losses
+    # Hydraulic conductivity
+    K_s<-2.82 # cm/day
+    # Campbell's b
+    b<-16.1501 # neurotheta Medium heavy clay
+    # van Genuchten parameters
+    avg <- 0.0613
+    nvg <- 1.086
+    s_fc<-0.3936/n # Field capacity
+    # bubbling pressure
+    psi_s_bar<--1.4E-3 # IS IN HERE SO DON'T NEED TO DEFINE IN THE VEG FILES
+ h1bar =  -psi_s_bar 
+   hb = psi_s_bar*-10^4
+
+# parameters describing the soil
+  soilpar <- list(b = b, n = n, s_fc = s_fc, K_s = K_s, 
+                psi_s_bar = psi_s_bar, h1bar = h1bar, hb = hb)
+
+for (i in 1:length(alpha)) {
+  
+for (j in 1:length(lambda)) {
+    # generate the rainfall
+    Rain <- Precip(time,alpha[i],lambda[j],delta)
+    Rainlist <- data.frame(Precip(time,alpha[i],lambda[j],delta)) 
+    
+    sub_store[[j]] <-data.frame(alpha_o=rep(alpha[i],time),
+                                lambda_o=rep(lambda[j],time),
+                                balances(Rain,plotit=T, par=par,
+                                soilpar, vegpar))
+  }
+  Store[[i]] <- sub_store
+}
+```
+
+
+
+
+Plotting M and P for different lambdas
+
+```{r}
+require(ggplot2)
+lambda_sum <- do.call(rbind,Store[][[2]])
+lambda_sum$time <- rep(1:time,length(lambda))
+
+pl <- ggplot(lambda_sum,aes(x=time,y=P, colour="P (plant biomass density [gm-2])")) + geom_line()
+pl  <- pl + geom_line(aes(x=time,y=M, colour="Moisture"))  
+pl <- pl +  facet_wrap(~lambda_o)   #, colour=lambda_o (put this in aes-brackets) 
+pl  + ggtitle("Plant biomass P and soilmoisture M for varying lambdas - Experiment 2") +  geom_line(aes(x=time, y=SmM, colour= "S (soil salt mg/L")) + theme(plot.title = element_text(lineheight=.8, face="bold"))
+```
+
+Plotting Soil water salt concentration for different alphas and lambdas
+
+```{r}
+lambda_sum_all <- do.call(rbind,do.call(rbind,Store))
+lambda_sum_all$time <- rep(rep(1:time,length(lambda)),length(alpha))
+
+
+pa <- ggplot(lambda_sum_all,aes(x=time,y=SmM,col=as.factor(lambda_o))) + geom_line(linetype=1) 
+# pa <- pa + + scale_color_gradient(low="blue", high="red")
+pa <- pa  + facet_wrap(~alpha_o) + ggtitle("Soil water salt mass [g] for varying alphas and lambdas - Experiment 2") + theme(plot.title = element_text(lineheight=.8, face="bold"))
+pa  
+```
+
+
+
+```{r}
+
+Soil2P<- lambda_sum$P
+Soil2M <-lambda_sum$M
+Soil2SmM<-lambda_sum$SmM
+Soil2CM<-lambda_sum$CM
+
+``` 
+
+## Coarse Sand
+
+This loop generates rainfall with the distribution properties alpha[i] and lambda[j].
+For each alpha[i] and each lambda[j] the soil water balance function is executed and the results stored in a nested list.
+```{r}
+# Coarse Sand
+    n<-0.368 # porosity
+    # more soil variables for evaporation & losses
+    # Hydraulic conductivity
+    K_s<-182.68 # cm/day
+    # Campbell's b
+    b<- 4.1152
+    # van Genuchten parameters
+    avg <- 0.0712   # Soil hydraulic parameters for van Genuchtan function
+    nvg <- 1.392    # soil hydraulic papameters for van Genuchtan function
+    s_fc<-0.1895/n # Field capacity
+    
+    psi_s_bar<--0.61E-3 
+   h1bar =  -psi_s_bar 
+   hb = psi_s_bar*-10^4
+
+# parameters describing the soil
+  soilpar <- list(b = b, n = n, s_fc = s_fc, K_s = K_s, 
+                psi_s_bar = psi_s_bar, h1bar = h1bar, hb = hb)
+
+
+
+for (i in 1:length(alpha)) {
+  
+for (j in 1:length(lambda)) {
+    # generate the rainfall
+    Rain <- Precip(time,alpha[i],lambda[j],delta)
+    Rainlist <- data.frame(Precip(time,alpha[i],lambda[j],delta)) 
+    
+    sub_store[[j]] <-data.frame(alpha_o=rep(alpha[i],time),
+                                lambda_o=rep(lambda[j],time),
+                                balances(Rain,plotit=T, par=par,
+                                soilpar, vegpar))
+  }
+  Store[[i]] <- sub_store
+}
+```
+
+
+
+
+Plotting M and P for different lambdas
+
+```{r}
+require(ggplot2)
+lambda_sum <- do.call(rbind,Store[][[2]])
+lambda_sum$time <- rep(1:time,length(lambda))
+
+pl <- ggplot(lambda_sum,aes(x=time,y=P, colour="P (plant biomass density [gm-2])")) + geom_line()
+pl  <- pl + geom_line(aes(x=time,y=M, colour="Moisture"))  
+pl <- pl +  facet_wrap(~lambda_o)   #, colour=lambda_o (put this in aes-brackets) 
+pl  + ggtitle("Plant biomass P and soilmoisture M for varying lambdas - Experiment 2") +  geom_line(aes(x=time, y=SmM, colour= "S (soil salt mg/L")) + theme(plot.title = element_text(lineheight=.8, face="bold"))
+```
+
+Plotting Soil water salt concentration for different alphas and lambdas
+
+```{r}
+lambda_sum_all <- do.call(rbind,do.call(rbind,Store))
+lambda_sum_all$time <- rep(rep(1:time,length(lambda)),length(alpha))
+
+
+pa <- ggplot(lambda_sum_all,aes(x=time,y=SmM,col=as.factor(lambda_o))) + geom_line(linetype=1) 
+# pa <- pa + + scale_color_gradient(low="blue", high="red")
+pa <- pa  + facet_wrap(~alpha_o) + ggtitle("Soil water salt mass [g] for varying alphas and lambdas - Experiment 2") + theme(plot.title = element_text(lineheight=.8, face="bold"))
+pa  
+```
+
+
+```{r}
+
+Soil3P<- lambda_sum$P
+Soil3M <-lambda_sum$M
+Soil3SmM<-lambda_sum$SmM
+Soil3CM<-lambda_sum$CM
+
+``` 
+
+
+## Comparing summaries 
+```{r}
+par(mfrow = c(1,3))
+summary(Soil1P) # Plant biomass 
+summary(Soil2P) # Plant biomass 
+summary(Soil3P) # Plant biomass 
+
+summary(Soil1M) # soil moisture 
+summary(Soil2M) # soil moisture 
+summary(Soil3M) # soil moisture 
+
+summary(Soil1SmM) # soil salt mass 
+summary(Soil2SmM) # soil salt mass 
+summary(Soil3SmM) # soil salt mass 
+
+summary(Soil1CM) # soil salt concentration 
+summary(Soil2CM) # soil salt concentration 
+summary(Soil3CM) # soil salt concentration 
+``` 
+
+## Comparing the distributions 
+```{r}
+
+par(mfrow = c(1,3))
+hist(Soil1P, breaks=10, main = 'Plant biomass Soil 1')
+hist(Soil2P, breaks=10, main = 'Plant biomass Soil 2')
+hist(Soil3P, breaks=10, main = 'Plant biomass Soil 3')
+
+hist(Soil1M, breaks=10,main="Soil moisture Soil 1")
+hist(Soil2M, breaks=10,main="Soil moisture Soil 2")
+hist(Soil3M, breaks=10,main="Soil moisture Soil 3")
+
+hist(Soil1SmM, breaks=10,main="soil salt mass Soil 1")
+hist(Soil2SmM, breaks=10,main="soil salt mass Soil 2")
+hist(Soil3SmM, breaks=10,main="soil salt mass Soil 3")
+
+
+hist(Soil1CM, breaks=10, main="Salt concentration in soil 1")
+hist(Soil2CM, breaks=10, main="Salt concentration in soil 2")
+hist(Soil3CM, breaks=10, main="Salt concentration in soil 3")
+
+```
+
+## Statistical tests
+```{r}
+wilcox.test(Soil1M,Soil2M) # soil moisture
+wilcox.test(Soil2M,Soil3M) # soil moisture
+wilcox.test(Soil1M,Soil3M) # soil moisture
+
+wilcox.test(Soil1P,Soil2P) # Plant biomass
+wilcox.test(Soil2P,Soil3P) # Plant biomass
+wilcox.test(Soil1P,Soil3P) # Plant biomass
+
+wilcox.test(Soil1SmM,Soil2SmM) # soil salt mass
+wilcox.test(Soil2SmM,Soil3SmM) # soil salt mass
+wilcox.test(Soil1SmM,Soil3SmM) # soil salt mass
+
+wilcox.test(Soil1CM,Soil2CM) # salt conc
+wilcox.test(Soil2CM,Soil3CM) # salt conc
+wilcox.test(Soil1CM,Soil3CM) # salt conc
+
+```
+
+## Conclusive remarks
+
+
+Soil moisture differes significantly between all, with being the highest in heavy clay  and lowest in coarse sand. Plant biomass shows sign. differences between all three soils and is therefore and logically, also highest in heavy clay and lowest in coarse sand.  Salt mass does not differ significantly.
+Salt concentrations do differ significantly between sandy clay loam and coarse sand and heavy clay and coarse sand, with heavy clay showing the highest mean but coarse sand showing the highest peaks.
+
+Generally, model outputs with coarse sand appear much more erratic and unstable, amplitudes are large and plants tend to die more easily than in the other two soil types.
