@@ -54,11 +54,11 @@ Soil properties were derived from standard Australian soils in Neurotheta (Minas
     psi_s_bar<--1.2E-3 #
  
    h1bar =  -psi_s_bar 
-   hb = psi_s_bar*-10^4
+   hb = psi_s_bar*-10^5 # mm
  
 
-  Zmax =1000 # [cm] maximum GROUNDWATER DEPTH
-  Z =300 # [cm] actual groundwater depth 
+  Zmax =10000 # [mm] maximum GROUNDWATER DEPTH Check
+  Z =3000 # [mm] actual groundwater depth Check
 
 # parameters describing the soil
   soilpar <- list(b = b, n = n, s_fc = s_fc, K_s = K_s, 
@@ -67,7 +67,7 @@ Soil properties were derived from standard Australian soils in Neurotheta (Minas
     # Vegetation 1 (Grass)
     # paspalum secateum F-I and R-I, 2004
 
-    Zr = 40 # soil depth (cm)   Also Table 2...Fernandez-Illescas and Rodriguez-Iturbe...2001
+    Zr = 400 # soil depth (mm)   Check Also Table 2...Fernandez-Illescas and Rodriguez-Iturbe...2001
 
 
  # parameters describing the root zone   
@@ -76,7 +76,7 @@ Soil properties were derived from standard Australian soils in Neurotheta (Minas
 
 # parameters describing plant dynamics and salt features
 
-  alpha_i=0.1 #maximum infiltration rate per day, http://www.fao.org/docrep/s8684e/s8684e0a.htm
+  alpha_i=K_s #maximum infiltration rate per day, http://www.fao.org/docrep/s8684e/s8684e0a.htm
          
   k=12 # Saco et al, 2013
   W0=0.2 # Saco et al, 2013
@@ -120,7 +120,7 @@ WU <- function(M,P,par){
 # based on Salvucci, 1993
 L_n <- function(M,Z,Zmax,soilpar,vegpar) {
    Zr <- vegpar$Zr
-   hb <- soilpar$psi_s_bar*-10^4
+   hb <- soilpar$psi_s_bar*-10^5 # (mm?)
     soilpar$s_fc <- (Z/hb)^(-1/soilpar$b)
    
    s=M/(soilpar$n*Zr)
@@ -151,6 +151,16 @@ return(flux)
 
 ```
 
+```{r Precip}
+Precip <- function(time,alpha,lambda,delta) {
+  # generate a vector of times between rainfall events > delta
+  f_P<-floor(rexp(time,lambda*exp(-delta/alpha))) # vector of times between rainfall occurrences (equation 4 & 8)
+  # generate a binary vector from this (impulse function)
+  binary.vec <- unlist(lapply(1:time,function(i) c(rep(0,f_P[i]),1)))
+  R <- rexp(length(binary.vec),1/alpha)*binary.vec 
+  return(R[1:time])
+}
+```
 
 ##Experiment 
 
@@ -257,8 +267,8 @@ balances <- function(Rain, par, plotit=T,
 
 
 # Balance for water depth on soil
-
-h_sub[tt+1] <- h.old + ifelse(tt==1,Rain[t],0) - Infil(h.old, P.old,par)*timeincr #- Ep*timeincr
+# change in multiplier 10* rainfall to make mm
+h_sub[tt+1] <- h.old + ifelse(tt==1,10*Rain[t],0) - Infil(h.old, P.old,par)*timeincr #- Ep*timeincr
 
 # Infiltration
 
@@ -454,7 +464,7 @@ For each alpha[i] and each lambda[j] the soil water balance function is executed
     # bubbling pressure
     psi_s_bar<--1.4E-3 # IS IN HERE SO DON'T NEED TO DEFINE IN THE VEG FILES
  h1bar =  -psi_s_bar 
-   hb = psi_s_bar*-10^4
+   hb = psi_s_bar*-10^5
 
 # parameters describing the soil
   soilpar <- list(b = b, n = n, s_fc = s_fc, K_s = K_s, 
@@ -535,7 +545,7 @@ For each alpha[i] and each lambda[j] the soil water balance function is executed
     
     psi_s_bar<--0.61E-3 
    h1bar =  -psi_s_bar 
-   hb = psi_s_bar*-10^4
+   hb = psi_s_bar*-10^5
 
 # parameters describing the soil
   soilpar <- list(b = b, n = n, s_fc = s_fc, K_s = K_s, 
