@@ -57,7 +57,7 @@ Soil properties were derived from standard Australian soils in Neurotheta (Minas
  
 
   Zmax =1000 # [cm] maximum GROUNDWATER DEPTH
-  Z =100 # [cm] actual groundwater depth 
+  Z =1000 # [cm] actual groundwater depth 
 
 # parameters describing the soil
   soilpar <- list(b = b, n = n, s_fc = s_fc, K_s = K_s, 
@@ -66,7 +66,7 @@ Soil properties were derived from standard Australian soils in Neurotheta (Minas
     # Vegetation 1 (Grass)
     # paspalum secateum F-I and R-I, 2004
 
-    Zr = 40 # soil depth (cm)   Also Table 2...Fernandez-Illescas and Rodriguez-Iturbe...2001
+    Zr = 400 # soil depth (cm)   Also Table 2...Fernandez-Illescas and Rodriguez-Iturbe...2001
 
 
  # parameters describing the root zone   
@@ -75,7 +75,7 @@ Soil properties were derived from standard Australian soils in Neurotheta (Minas
 
 # parameters describing plant dynamics and salt features
 
-  alpha_i=0.1 #maximum infiltration rate per day, http://www.fao.org/docrep/s8684e/s8684e0a.htm
+  alpha_i=0.5 #maximum infiltration rate per day, http://www.fao.org/docrep/s8684e/s8684e0a.htm
          
   k=12 # Saco et al, 2013
   W0=0.2 # Saco et al, 2013
@@ -83,9 +83,9 @@ Soil properties were derived from standard Australian soils in Neurotheta (Minas
   k1=5 # Saco et al, 2013
   c=10  # Saco et al, 2013
   f= 0.4  # f is the soil salt leaching efficiency (whether some salt is retained)
-  ConcConst = 0.1 # ConcConst is the concentration of the salt in the infiltrating water in g/l
+  ConcConst = 0.01 # ConcConst is the concentration of the salt in the infiltrating water in g/l
   CM.gw = 0.1 # salt concentration in groundwater
-  d=0.05 # fraction of plant mortality
+  d=0.24 # fraction of plant mortality
   
   par <- list(alpha_i=alpha_i,k=k, W0=W0, gmax=gmax, k1=k1, c=c, f=f, ConcConst=ConcConst, CM.gw= CM.gw, d=d)
 ```
@@ -112,6 +112,16 @@ WU <- function(M,P,par){
 }
 ```
 
+```{r Precip}
+Precip <- function(time,alpha,lambda,delta) {
+  # generate a vector of times between rainfall events > delta
+  f_P<-floor(rexp(time,lambda*exp(-delta/alpha))) # vector of times between rainfall occurrences (equation 4 & 8)
+  # generate a binary vector from this (impulse function)
+  binary.vec <- unlist(lapply(1:time,function(i) c(rep(0,f_P[i]),1)))
+  R <- rexp(length(binary.vec),1/alpha)*binary.vec 
+  return(R[1:time])
+}
+```
 
 ## Vertical Flux function
 ```{r VerticalFlux}
@@ -119,33 +129,38 @@ WU <- function(M,P,par){
 # based on Salvucci, 1993
 L_n <- function(M,Z,Zmax,soilpar,vegpar) {
    Zr <- vegpar$Zr
-   hb <- soilpar$psi_s_bar*-10^4
-    soilpar$s_fc <- (Z/hb)^(-1/soilpar$b)
+   hb <- - soilpar$psi_s_bar*10^5 # (mm?)
+   soilpar$s_fc <- (Z/hb)^(-1/soilpar$b)
    
-   s=M/(soilpar$n*Zr)
-   
-   psi = hb*s^soilpar$b
-   
-   m=5.64  # in Salvucci's paper it is called n, but I called it m here to not confuse it with porosity
+   s=M/(soilpar$n*vegpar$Zr)
+  
+   psi = hb*s^-soilpar$b
+ 
+#   hb <- hb*soilpar$n
+#  hb_nd <- hb/psi # non-dim hb
+   m=2 + 3/soilpar$b#5.64  # in Salvucci's paper it is called n, but I called it m here to not confuse it with porosity
    #m=3.3 # 3.3 for clay, 5.64 for silt-loam, 11.88 for sand-loam 
 
 
 Znd <- Z/Zmax  # a non-dimensional Znd between 0 and 1 is defined, e.g. Zmax=10 m, Z= 1 m, Znd=0.1
 
 
-#non-dimensional form of the flow rate equation
-q <-((((Znd/hb)^-m)-((psi/hb)^-m))/((1+((psi/hb)^-m))+((m-1)*((Znd/hb)^-m)))) #nd flow rate
+#non-dimensional form of the flow rate equation  #nd flow rate
+# qtot <- -soilpar$K_s*((z/hb)^(-n)-(s^-soilpar$b)^(-n))/(1+(s^-soilpar$b)^        (-n)+(n-1)*(z/hb)^(-n))/(soilpar$n*vegpar$Zr)
 
-   
-   # Mass flux
+q <-((Z/hb)^(-m)-(psi/hb)^(-m))/(1+(psi/hb)^(-m)+(m-1)*(Z/hb)^(-m))#/(soilpar$n*Zr) # 
+#q <-((((Znd/hb_nd)^-m)-((psi/hb)^-m))/((1+((psi/hb)^-m))+((m-1)*((Znd/hb_nd#)^-m)))) # 
+# q <-((((Znd/hb_nd)^-m)-((psi/hb)^-m))/((1+((psi/hb)^-m))+((m-1)*((Znd/hb_nd)^-m)))) # 
 
-
-flux <- M*q
-flux<-ifelse(s<soilpar$s_fc, abs(flux), -abs(flux))
+# Mass flux
+#browser()
+flux <- soilpar$K_s*q
+#flux<-ifelse(s<soilpar$s_fc, abs(flux), -abs(flux))
 
 
 return(flux)
 }
+
 
 
 ```
@@ -257,7 +272,7 @@ balances <- function(Rain, par, plotit=T,
 
 # Balance for water depth on soil
 
-h_sub[tt+1] <- h.old + ifelse(tt==1,Rain[t],0) - Infil(h.old, P.old,par)*timeincr #- Ep*timeincr
+h_sub[tt+1] <- h.old + ifelse(tt==1,(10*Rain[t]),0) - Infil(h.old, P.old,par)*timeincr #- Ep*timeincr
 
 # Infiltration
 
@@ -439,7 +454,7 @@ For each alpha[i] and each lambda[j] the soil water balance function is executed
 ```{r}
 #source("Rainfall.R")
 
-Z = 250
+Z = 2500
 
 for (i in 1:length(alpha)) {
   
@@ -503,7 +518,7 @@ This loop generates rainfall with the distribution properties alpha[i] and lambd
 For each alpha[i] and each lambda[j] the soil water balance function is executed and the results stored in a nested list.
 ```{r}
 #source("Rainfall.R")
-Z = 500
+Z = 5000
 
 for (i in 1:length(alpha)) {
   
@@ -625,12 +640,3 @@ wilcox.test(Z1CM,Z3CM) # salt conc
 ```
 
 ## Conclusive remarks
-Salt concentrations: Z2 and Z3 differ significantly from each other and so do Z1 and Z3. 
-No significant differences in salt mass.
-Regarding plant biomass, Z1 and Z3 aswell as Z2 and Z3 differ from each other. Concerning soil moisture all three differ from each other.
-
-It shows that Z1 and Z2 don't show much differences when it comes to plant biomass and salt concentrations. Differences between Z2 and Z3 are mostly crucial and so are differences between Z1 and Z3. The jump from Z1 to Z2 seems to be minor.
-
-The highest mean for plant biomass was found for Z=500 cm. Mean soil moisture is higher at Z=500 cm, but has the lowest maximum.
-Salt concentration with Z=500 are highest, interestingly.
-
