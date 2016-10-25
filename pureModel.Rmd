@@ -76,7 +76,7 @@ Soil properties were derived from standard Australian soils in Neurotheta (Minas
 
 # parameters describing plant dynamics and salt features
 
-  alpha_i=K_s/Z #maximum infiltration rate per day, http://www.fao.org/docrep/s8684e/s8684e0a.htm
+  alpha_i=0.5 #maximum infiltration rate per day, This needs to be a fraction of h (p117 Saco and Moreno-Las Heras) http://www.fao.org/docrep/s8684e/s8684e0a.htm
 
   k=12 # Saco et al, 2013
   W0=0.2 # Saco et al, 2013
@@ -125,27 +125,28 @@ L_n <- function(M,Z,Zmax,soilpar,vegpar) {
    
    s=M/(soilpar$n*vegpar$Zr)
   
-   psi = hb*s^soilpar$b
+   psi = hb*s^-soilpar$b
  
 #   hb <- hb*soilpar$n
-  hb_nd <- hb/psi # non-dim hb
-   m=5.64  # in Salvucci's paper it is called n, but I called it m here to not confuse it with porosity
+#  hb_nd <- hb/psi # non-dim hb
+   m=2 + 3/soilpar$b#5.64  # in Salvucci's paper it is called n, but I called it m here to not confuse it with porosity
    #m=3.3 # 3.3 for clay, 5.64 for silt-loam, 11.88 for sand-loam 
 
 
-Znd <- Z/Zmax  # a non-dimensional Znd between 0 and 1 is defined, e.g. Zmax=10 m, Z= 1 m, Znd=0.1
+#Znd <- Z/Zmax  # a non-dimensional Znd between 0 and 1 is defined, e.g. Zmax=10 m, Z= 1 m, Znd=0.1
 
 
 #non-dimensional form of the flow rate equation  #nd flow rate
+# qtot <- -soilpar$K_s*((z/hb)^(-n)-(s^-soilpar$b)^(-n))/(1+(s^-soilpar$b)^        (-n)+(n-1)*(z/hb)^(-n))/(soilpar$n*vegpar$Zr)
 
-q <-((((Znd/hb_nd)^-m)-((psi/hb)^-m))/((1+((psi/hb)^-m))+((m-1)*((Znd/hb_nd)^-m)))) # 
+q <-((Z/hb)^(-m)-(psi/hb)^(-m))/(1+(psi/hb)^(-m)+(m-1)*(Z/hb)^(-m))#/(soilpar$n*Zr) # 
+#q <-((((Znd/hb_nd)^-m)-((psi/hb)^-m))/((1+((psi/hb)^-m))+((m-1)*((Znd/hb_nd#)^-m)))) # 
 # q <-((((Znd/hb_nd)^-m)-((psi/hb)^-m))/((1+((psi/hb)^-m))+((m-1)*((Znd/hb_nd)^-m)))) # 
 
 # Mass flux
-
-flux <- (M*q)
-
-flux<-ifelse(s<soilpar$s_fc, abs(flux), -abs(flux))
+#browser()
+flux <- soilpar$K_s*q
+#flux<-ifelse(s<soilpar$s_fc, abs(flux), -abs(flux))
 
 
 return(flux)
