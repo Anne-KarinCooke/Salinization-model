@@ -57,16 +57,12 @@ Soil properties were derived from standard Australian soils in Neurotheta (Minas
    hb = psi_s_bar*-10^5 # mm
  ### Salvucci equation m
 
- m=5.64  # in Salvucci's paper it is called n, but I called it m here to not confuse it with porosity
-   #m=3.3 # 3.3 for clay, 5.64 for silt-loam, 11.88 for sand-loam 
-
-
   Zmax =10000 # [mm] maximum GROUNDWATER DEPTH Check
   Z =3000 # [mm] actual groundwater depth Check
 
 # parameters describing the soil
   soilpar <- list(b = b, n = n, s_fc = s_fc, K_s = K_s, 
-                psi_s_bar = psi_s_bar, h1bar = h1bar, hb = hb, m=m)
+                psi_s_bar = psi_s_bar, h1bar = h1bar, hb = hb)
     #................................................
     # Vegetation 1 (Grass)
     # paspalum secateum F-I and R-I, 2004
@@ -80,7 +76,7 @@ Soil properties were derived from standard Australian soils in Neurotheta (Minas
 
 # parameters describing plant dynamics and salt features
 
-  alpha_i=K_s/Z #maximum infiltration rate per day
+  alpha_i=0.5 #maximum infiltration rate per day
 
   k=12 # Saco et al, 2013
   W0=0.2 # Saco et al, 2013
@@ -124,34 +120,41 @@ WU <- function(M,P,par){
 # based on Salvucci, 1993
 L_n <- function(M,Z,Zmax,soilpar,vegpar) {
    Zr <- vegpar$Zr
-   
+   hb <- - soilpar$psi_s_bar*10^5 # (mm?)
    soilpar$s_fc <- (Z/hb)^(-1/soilpar$b)
    
    s=M/(soilpar$n*vegpar$Zr)
   
-   psi = hb*s^soilpar$b
+   psi = hb*s^-soilpar$b
  
+#   hb <- hb*soilpar$n
+#  hb_nd <- hb/psi # non-dim hb
+   m=2 + 3/soilpar$b#5.64  # in Salvucci's paper it is called n, but I called it m here to not confuse it with porosity
+   #m=3.3 # 3.3 for clay, 5.64 for silt-loam, 11.88 for sand-loam 
 
-  hb_nd <- hb/psi# non-dim hb
-  
 
-Znd <- Z/Zmax  # a non-dimensional Znd between 0 and 1 is defined, e.g. Zmax=10 m, Z= 1 m, Znd=0.1
+#Znd <- Z/Zmax  # a non-dimensional Znd between 0 and 1 is defined, e.g. Zmax=10 m, Z= 1 m, Znd=0.1
 
 
 #non-dimensional form of the flow rate equation  #nd flow rate
+# qtot <- -soilpar$K_s*((z/hb)^(-n)-(s^-soilpar$b)^(-n))/(1+(s^-soilpar$b)^        (-n)+(n-1)*(z/hb)^(-n))/(soilpar$n*vegpar$Zr)
 
-q <-((((Znd/hb_nd)^-soilpar$m)-((psi/hb)^-soilpar$m))/((1+((psi/hb)^-soilpar$m))+((m-1)*((Znd/hb_nd)^-soilpar$m)))) # 
-
+q <-(((Z/hb)^(-m)-(psi/hb)^(-m))/(1+(psi/hb)^(-m)+((m-1)*(Z/hb)^(-m))))#/(soilpar$n*Zr) # 
+#q <-((((Znd/hb_nd)^-m)-((psi/hb)^-m))/((1+((psi/hb)^-m))+((m-1)*((Znd/hb_nd#)^-m)))) # 
+# q <-((((Znd/hb_nd)^-m)-((psi/hb)^-m))/((1+((psi/hb)^-m))+((m-1)*((Znd/hb_nd)^-m)))) # 
 
 # Mass flux
+#browser()
+# flux <- soilpar$K_s*q
+ flux <- soilpar$K_s*q
 
-flux <- (M*q)
-
-flux<-ifelse(s<soilpar$s_fc, abs(flux)/10, -abs(flux))
+#  flux<-ifelse(s<soilpar$s_fc, abs(flux), -abs(flux))
 
 
 return(flux)
 }
+
+
 
 
 
@@ -473,18 +476,13 @@ For each alpha[i] and each lambda[j] the soil water balance function is executed
     h1bar =  -psi_s_bar 
     hb = psi_s_bar*-10^5
 
-## Salvucci equation m
- #m=3.3 # 3.3 for clay, 5.64 for silt-loam, 11.88 for sand-loam 
-m= 3.3
 
-
-
-alpha_i=K_s/Z #maximum infiltration rate per day
+alpha_i=0.5 #maximum infiltration rate per day
     par <- list(alpha_i=alpha_i,k=k, W0=W0, gmax=gmax, k1=k1, c=c, f=f, ConcConst=ConcConst, CM.gw= CM.gw, d=d) 
 
 # parameters describing the soil
   soilpar <- list(b = b, n = n, s_fc = s_fc, K_s = K_s, 
-                psi_s_bar = psi_s_bar, h1bar = h1bar, hb = hb, m=m)
+                psi_s_bar = psi_s_bar, h1bar = h1bar, hb = hb)
 
 for (i in 1:length(alpha)) {
   
@@ -562,17 +560,14 @@ For each alpha[i] and each lambda[j] the soil water balance function is executed
     psi_s_bar<--0.61E-3 
    h1bar =  -psi_s_bar 
    hb = psi_s_bar*-10^5
-## Salvucci equation m
- #m=3.3 # 3.3 for clay, 5.64 for silt-loam, 11.88 for sand-loam 
-m= 11.88 
 
 
-alpha_i=K_s/Z #maximum infiltration rate per day
+alpha_i=0.5 #maximum infiltration rate per day
     par <- list(alpha_i=alpha_i,k=k, W0=W0, gmax=gmax, k1=k1, c=c, f=f, ConcConst=ConcConst, CM.gw= CM.gw, d=d) 
 
 # parameters describing the soil
   soilpar <- list(b = b, n = n, s_fc = s_fc, K_s = K_s, 
-                psi_s_bar = psi_s_bar, h1bar = h1bar, hb = hb, m=m)
+                psi_s_bar = psi_s_bar, h1bar = h1bar, hb = hb)
 
 
 
