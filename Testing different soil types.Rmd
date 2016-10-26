@@ -58,7 +58,7 @@ Soil properties were derived from standard Australian soils in Neurotheta (Minas
  ### Salvucci equation m
 
   Zmax =10000 # [mm] maximum GROUNDWATER DEPTH Check
-  Z =3000 # [mm] actual groundwater depth Check
+  Z =1000 # [mm] actual groundwater depth Check
 
 # parameters describing the soil
   soilpar <- list(b = b, n = n, s_fc = s_fc, K_s = K_s, 
@@ -76,7 +76,7 @@ Soil properties were derived from standard Australian soils in Neurotheta (Minas
 
 # parameters describing plant dynamics and salt features
 
-  alpha_i=0.5 #maximum infiltration rate per day
+  alpha_i=1 #maximum infiltration rate per day
 
   k=12 # Saco et al, 2013
   W0=0.2 # Saco et al, 2013
@@ -281,7 +281,7 @@ balances <- function(Rain, par, plotit=T,
 h_sub[tt+1] <- h.old + ifelse(tt==1,(10*Rain[t]),0) - Infil(h.old, P.old,par)*timeincr
 
 # Infiltration
-
+ifelse(h_sub[tt+1]<soilpar$K_s, soilpar$alpha_i <- 1, soilpar$alpha_i<- (1-(h_sub[tt+1]-soilpar$K_s)/h_sub[tt+1]))
       I_sub[tt] <- Infil(h.old, P.old,par)*timeincr
 
 #  1. Update soil moisture with infiltration
@@ -357,7 +357,7 @@ h_sub[tt+1] <- h.old + ifelse(tt==1,(10*Rain[t]),0) - Infil(h.old, P.old,par)*ti
 # Plotting
  
 if (plotit==T) {  
-  plot(M, type="l",ylim=c(-10,150),xlim=c(0,time),xlab=("time [d]"), main=paste("Exp 1  lambda=", lambda[j],"alpha=", alpha[i]))
+  plot(M, type="l",ylim=c(-10,100),xlim=c(0,time),xlab=("time [d]"), main=paste("Exp 1  lambda=", lambda[j],"alpha=", alpha[i]))
   points(Rain*10, type="h", col="skyblue")
    
     lines(h,type="l", col="blue")
@@ -477,7 +477,7 @@ For each alpha[i] and each lambda[j] the soil water balance function is executed
     hb = psi_s_bar*-10^5
 
 
-alpha_i=0.5 #maximum infiltration rate per day
+alpha_i=1 #maximum infiltration rate per day
     par <- list(alpha_i=alpha_i,k=k, W0=W0, gmax=gmax, k1=k1, c=c, f=f, ConcConst=ConcConst, CM.gw= CM.gw, d=d) 
 
 # parameters describing the soil
@@ -562,7 +562,7 @@ For each alpha[i] and each lambda[j] the soil water balance function is executed
    hb = psi_s_bar*-10^5
 
 
-alpha_i=0.5 #maximum infiltration rate per day
+alpha_i=1 #maximum infiltration rate per day
     par <- list(alpha_i=alpha_i,k=k, W0=W0, gmax=gmax, k1=k1, c=c, f=f, ConcConst=ConcConst, CM.gw= CM.gw, d=d) 
 
 # parameters describing the soil

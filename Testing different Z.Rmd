@@ -53,7 +53,7 @@ Soil properties were derived from standard Australian soils in Neurotheta (Minas
     psi_s_bar<--1.2E-3 #
  
    h1bar =  -psi_s_bar 
-   hb = psi_s_bar*-10^4
+   hb = psi_s_bar*-10^5
  
 
   Zmax =1000 # [cm] maximum GROUNDWATER DEPTH
