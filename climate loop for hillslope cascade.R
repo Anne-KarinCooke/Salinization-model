@@ -1,8 +1,12 @@
 # Climate loop for hillslop cascade
 
 source("Hillslope cascade.R")
- alpha <- seq(0.6,1.5,by=0.1) 
- lambda <- seq(0.1,1,by=0.1)
+#  alpha <- seq(0.6,1.5,by=0.1) 
+#  lambda <- seq(0.1,1,by=0.1)
+
+alpha <- c(0.6,1.5) 
+lambda <- c(0.1,1)
+g <-c(1,2,3)
  
  Store <- list()
  sub_store <- list()
@@ -10,10 +14,10 @@ source("Hillslope cascade.R")
  delta <- 0
  set.seed(1000)
  
- gstore<-list() #############
+
  
- par_in$d <- 0.15
- 
+#   for (g in 1:length(grids)) {
+
 for (i in 1:length(alpha)) {
      
      for (j in 1:length(lambda)) {
@@ -22,21 +26,22 @@ for (i in 1:length(alpha)) {
        Rainlist <- data.frame(Precip(time,alpha[i],lambda[j],delta))
        
        sub_store[[j]] <-data.frame(alpha_o=rep(alpha[i],time),
-                                    lambda_o=rep(lambda[j],time), 
+                                    lambda_o=rep(lambda[j],time),
+                                   
                                     
-                                    balances2D(Rain,plotit=T,  soilpar=list(n=n,Zr=Zr, s_fc=s_fc, K_s=K_s, h1bar=h1bar, b=b),
-                                             vegpar=list(Zr=Zr))) 
+                                    balances2D(Rain,plotit=T,  soilpar=soilpar,
+                                             vegpar=vegpar, par=par)) 
        
        
        
        }
        Store[[i]] <- sub_store
      }
- #  gstore[[g]] <-Store
- 
+#    gstore[[g]] <-Store 
+#     }
    
-   
- 
+
+
  
 # Plotting M and P for different lambdas
 # 
