@@ -76,7 +76,7 @@ Soil properties were derived from standard Australian soils in Neurotheta (Minas
 
 # parameters describing plant dynamics and salt features
 
-  alpha_i=0.5 #maximum infiltration rate per day, This needs to be a fraction of h (p117 Saco and Moreno-Las Heras) http://www.fao.org/docrep/s8684e/s8684e0a.htm
+  alpha_i=1 #maximum infiltration rate per day, This needs to be a fraction of h (p117 Saco and Moreno-Las Heras) http://www.fao.org/docrep/s8684e/s8684e0a.htm
 
   k=12 # Saco et al, 2013
   W0=0.2 # Saco et al, 2013
@@ -277,8 +277,9 @@ balances <- function(Rain, par, plotit=T,
 h_sub[tt+1] <- h.old + ifelse(tt==1,(10*Rain[t]),0) - Infil(h.old, P.old,par)*timeincr
 
 # Infiltration
-
-      I_sub[tt] <- Infil(h.old, P.old,par)*timeincr
+ifelse(h_sub[tt+1]<soilpar$K_s, soilpar$alpha_i <- 1, soilpar$alpha_i<- (1-(h_sub[tt+1]-soilpar$K_s)/h_sub[tt+1]))
+     
+       I_sub[tt] <- Infil(h.old, P.old,par)*timeincr
 
 #  1. Update soil moisture with infiltration
 
