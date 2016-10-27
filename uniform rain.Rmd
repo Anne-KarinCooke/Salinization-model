@@ -3,19 +3,10 @@
 ---
 title: "1D Model"
 author: "Anne-Karin Cooke"
-output: word_document
+output: html_document
 ---
 
 ## Experiments          
-
-
-1. alpha=0.6, lambda=0.1 # dry
-2. alpha=1.5, lambda=0.1
-3. alpha=1.5, lambda=1.0
-4. alpha=0.6, lambda=1.0 # wet
-
-In this version, Sandy Clay Loam was used.
-
 
 # Model set up
 In this model, salt enters the system through rainfall and from the groundwater table with the same concentration.
@@ -44,8 +35,6 @@ Soil properties were derived from standard Australian soils in Neurotheta (Minas
    hb = psi_s_bar*-10^5 # mm
  
 
-  Z =3000 # [mm] actual groundwater depth 
-
 # parameters describing the soil
   soilpar <- list(b = b, n = n, s_fc = s_fc, K_s = K_s, 
                 psi_s_bar = psi_s_bar, h1bar = h1bar, hb = hb)
@@ -69,7 +58,7 @@ Soil properties were derived from standard Australian soils in Neurotheta (Minas
   gmax=0.05 # Saco et al, 2013
   k1=5 # Saco et al, 2013
   c=10  # Saco et al, 2013
-  f= 0.8  # f is the soil salt leaching efficiency (whether some salt is retained)
+  f= 1 # f is the soil salt leaching efficiency (whether some salt is retained)
   ConcConst = 0.1 # ConcConst is the concentration of the salt in the infiltrating water in g/l
   CM.gw = 0.1 # salt concentration in groundwater
   d=0.24 # fraction of plant mortality
@@ -126,19 +115,8 @@ return(flux)
 }
 
 
-
 ```
 
-```{r Precip}
-Precip <- function(time,alpha,lambda,delta) {
-  # generate a vector of times between rainfall events > delta
-  f_P<-floor(rexp(time,lambda*exp(-delta/alpha))) # vector of times between rainfall occurrences (equation 4 & 8)
-  # generate a binary vector from this (impulse function)
-  binary.vec <- unlist(lapply(1:time,function(i) c(rep(0,f_P[i]),1)))
-  R <- rexp(length(binary.vec),1/alpha)*binary.vec 
-  return(R[1:time])
-}
-```
 
 
 ## Plant growth function 
@@ -171,8 +149,6 @@ balances <- function(Rain, par, plotit=T,
                       soilpar,
                       vegpar){
    
-
-  
 # Storage vectors for the daily steps are initialized.
 
    M <- rep(0,length(Rain)) # soil moisture [mm]
@@ -186,8 +162,6 @@ balances <- function(Rain, par, plotit=T,
    Svir <- rep(0,length(Rain)) # virtual saturation
    flux<- rep(0,length(Rain)) # drainage and capillary rise flux, according to sign
 
-
-
 # Initial values to start the simulation.
 
    
@@ -196,8 +170,6 @@ balances <- function(Rain, par, plotit=T,
    P[1] <- 30
    CM[1]<- 0
    Svir[1] <- M[1]
-
-
 
 # We decided to split the numerical calculations for the daily into 12 substeps.
 
@@ -242,7 +214,7 @@ balances <- function(Rain, par, plotit=T,
 # Balance for water depth on soil
 
 
-h_sub[tt+1] <- h.old + ifelse(tt==1,(10*Rain[t]),0) - Infil(h.old, P.old,par)*timeincr
+h_sub[tt+1] <- h.old + ifelse(tt==1,(Rain[t]),0) - Infil(h.old, P.old,par)*timeincr
 
 # Infiltration
 ifelse(h_sub[tt+1]<soilpar$K_s, soilpar$alpha_i <- 1, soilpar$alpha_i<- (1-(h_sub[tt+1]-soilpar$K_s)/h_sub[tt+1]))
@@ -322,89 +294,150 @@ ifelse(h_sub[tt+1]<soilpar$K_s, soilpar$alpha_i <- 1, soilpar$alpha_i<- (1-(h_su
 # Plotting
  
 if (plotit==T) {  
-  plot(M, type="l",ylim=c(-10,100),xlim=c(0,time),xlab=("time [d]"), main=paste(" lambda=", lambda[j],"alpha=", alpha[i]))
-  points(Rain*10, type="h", col="skyblue")
+  plot(Rain*10, type="h",col="skyblue",ylim=c(0,30),xlim=c(0,time),xlab=("time [d]"), ylab=("[mm]"))
+  lines(M, type="l",col="black" )
    
     lines(h,type="l", col="blue")
     abline(h=0, col="Gray50",lwd=2,lty=2)
 
     lines(SmM,type="l", col="red")
-    lines(CM,type="l", col="purple")
+    lines(CM*100,type="l", col="purple")
     lines(P/10,type="l", col="green")
     lines(flux,type="l", col="orange")
   
  
- legend("topright", title="Variables",cex=1, pt.cex=0.2, c("Moisture [mm]","Rainfall [mm]*10","overland flow depth[mm] ","salt mass in soil water [g]", "salt concentration in soil water [g/l]", "Plant biomass density [g/m^2]/10"),
-         col=c("black","skyblue","blue","red","purple","green"),lty=1)
+ legend("topright", title="Variables",cex=0.5, pt.cex=0.1, c("Moisture [mm]","Rainfall [mm]*10","overland flow depth[mm] ","salt mass in soil water [g]", "salt concentration in soil water [g/l]*100", "Plant biomass density [g/m^2]/10", "Vertical water flux [mm]"),
+         col=c("black","skyblue","blue","red","purple","green", "orange"),lty=1)
  
 }
 
 Out <- data.frame(P=P,M=M,h=h, CM=CM, SmM=SmM, In=In, flux=flux, Svir=Svir)
-return(Out)
+#return(Out)
 }
 ```
 
-## Changing climates
-Alpha and lambda are set to low and high values, respecitively.
-```{r VariableClimates}
-alpha <- c(0.6,1.5) 
-lambda <- c(0.1,1)
+## Uniform rain of 1 mm per day
+                       
+```{r uniform Rain}
 
-Store <- list()
-sub_store <- list()
-time <- 500
-delta <- 0
-set.seed(1000)
+    Rain_function<-function(time){ Rain <- rep(1, time)
+                         return(Rain)}
 ```
-
-This loop generates rainfall with the distribution properties alpha[i] and lambda[j].
-For each alpha[i] and each lambda[j] the soil water balance function is executed and the results stored in a nested list.
-```{r runClimateLoop}
-#source("Rainfall.R")
-
-
-for (i in 1:length(alpha)) {
-  
-for (j in 1:length(lambda)) {
-    # generate the rainfall
-    Rain <- Precip(time,alpha[i],lambda[j],delta)
-    Rainlist <- data.frame(Precip(time,alpha[i],lambda[j],delta)) 
-    
-    sub_store[[j]] <-data.frame(alpha_o=rep(alpha[i],time),
-                                lambda_o=rep(lambda[j],time),
-                                balances(Rain,plotit=T, par=par,
-                                soilpar, vegpar))
-  }
-  Store[[i]] <- sub_store
-}
-```
-
-
+This calls the balances function
 ## Results 
-
-
-Plotting M and P for different lambdas
-
 ```{r}
-require(ggplot2)
-lambda_sum <- do.call(rbind,Store[][[2]])
-lambda_sum$time <- rep(1:time,length(lambda))
+    Z =1000 # [mm]  groundwater depth 
+    time = 100 #days
+    balances(Rain=Rain_function(time), par=par, plotit=T, soilpar, vegpar)
+    time =500
+    balances(Rain=Rain_function(time), par=par, plotit=T, soilpar, vegpar)
+#     Z =2000 # [mm]  groundwater depth 
+#     time = 100 #days
+#     balances(Rain=Rain_function(time), par=par, plotit=T, soilpar, vegpar)
+#     time =500 #days
+#     balances(Rain=Rain_function(time), par=par, plotit=T, soilpar, vegpar)
+#     Z =3000 # [mm]  groundwater depth
+#     time = 100 #days
+#     balances(Rain=Rain_function(time), par=par, plotit=T, soilpar, vegpar)
+#     time =500 #days
+    balances(Rain=Rain_function(time), par=par, plotit=T, soilpar, vegpar)
+    Z =5000 # [mm]  groundwater depth
+    time = 100 #days
+    balances(Rain=Rain_function(time), par=par, plotit=T, soilpar, vegpar)
+    time =500 #days
+    balances(Rain=Rain_function(time), par=par, plotit=T, soilpar, vegpar)
+    Z =10000 # [mm]  groundwater depth
+    time = 100 #days
+    balances(Rain=Rain_function(time), par=par, plotit=T, soilpar, vegpar)
+    time =500 #days
+    balances(Rain=Rain_function(time), par=par, plotit=T, soilpar, vegpar)
 
-pl <- ggplot(lambda_sum,aes(x=time,y=P, colour="P (plant biomass density [gm-2])")) + geom_line()
-pl  <- pl + geom_line(aes(x=time,y=M, colour="Moisture"))  
-pl <- pl +  facet_wrap(~lambda_o)   
-pl  + ggtitle("Plant biomass P and soilmoisture M for varying lambdas") +  geom_line(aes(x=time, y=SmM, colour= "S (soil salt mg/L")) + theme(plot.title = element_text(lineheight=.4))
 ```
 
-Plotting Soil water salt concentration for different alphas and lambdas
+## Discussion - changing Z (distance to groundwater depth)
 
+After some flucations at the beginning which can be considered the initalization of the model,
+soil moisture, plant biomass and overland flow depths stabilize on the longterm. Whereas salt mass and concentrations continously rise
+as they are brought in by infiltration with every rainfall and accumulate in the soil. Plant biomass will eventually die, as soon as salt concentration
+make the soil inhabitable. The shallower the water table, the more water enters the soil moisture storage through capillary rise ("flux" in the graphs is much higher) and can be used by plants. Therefore plant biomass stabilizes at a higher level, the closer the groundwater table.
+
+## Testing different soil types
+### Medium Heavy Clay
 ```{r}
-lambda_sum_all <- do.call(rbind,do.call(rbind,Store))
-lambda_sum_all$time <- rep(rep(1:time,length(lambda)),length(alpha))
+
+  # Medium Heavy Clay
+    n<-0.4473 # porosity
+    # more soil variables for evaporation & losses
+    # Hydraulic conductivity
+    K_s<-2.82*10 # mm/day
+    # Campbell's b
+    b<-16.1501 # neurotheta Medium heavy clay
+
+    s_fc<-0.3936/n # Field capacity
+    # bubbling pressure
+    psi_s_bar<--1.4E-3 
+    h1bar =  -psi_s_bar 
+    hb = psi_s_bar*-10^5 #mm
 
 
-pa <- ggplot(lambda_sum_all,aes(x=time,y=SmM,col=as.factor(lambda_o))) + geom_line(linetype=1) 
-# pa <- pa + + scale_color_gradient(low="blue", high="red")
-pa <- pa  + facet_wrap(~alpha_o) + ggtitle("Soil water salt mass [g] for varying alphas and lambdas") + theme(plot.title = element_text(lineheight=.4))
-pa  
+# parameters describing the soil
+  soilpar <- list(b = b, n = n, s_fc = s_fc, K_s = K_s, 
+                psi_s_bar = psi_s_bar, h1bar = h1bar, hb = hb)
+
+    Z =1000 # [mm]  groundwater depth 
+    time = 100 #days
+    balances(Rain=Rain_function(time), par=par, plotit=T, soilpar, vegpar)
+    time =500
+    balances(Rain=Rain_function(time), par=par, plotit=T, soilpar, vegpar)
+
+    Z =10000 # [mm]  groundwater depth 
+    time = 100 #days
+    balances(Rain=Rain_function(time), par=par, plotit=T, soilpar, vegpar)
+    time =500
+    balances(Rain=Rain_function(time), par=par, plotit=T, soilpar, vegpar)
+
+ 
 ```
+
+## Testing different soils
+### Coarse Sand
+```{r}
+
+# Coarse Sand
+    n<-0.368 # porosity
+    # more soil variables for evaporation & losses
+    # Hydraulic conductivity
+    K_s<-182.68*10 # mm/day
+    # Campbell's b
+    b<- 4.1152
+
+    s_fc<-0.1895/n # Field capacity
+    
+    psi_s_bar<--0.61E-3 
+   h1bar =  -psi_s_bar 
+   hb = psi_s_bar*-10^5 #mm
+
+# parameters describing the soil
+  soilpar <- list(b = b, n = n, s_fc = s_fc, K_s = K_s, 
+                psi_s_bar = psi_s_bar, h1bar = h1bar, hb = hb)
+
+    Z =1000 # [mm]  groundwater depth 
+    time = 100 #days
+    balances(Rain=Rain_function(time), par=par, plotit=T, soilpar, vegpar)
+    time =500
+    balances(Rain=Rain_function(time), par=par, plotit=T, soilpar, vegpar)
+
+    Z =10000 # [mm]  groundwater depth 
+    time = 100 #days
+    balances(Rain=Rain_function(time), par=par, plotit=T, soilpar, vegpar)
+    time =500
+    balances(Rain=Rain_function(time), par=par, plotit=T, soilpar, vegpar)
+
+```
+
+## Discussion - Testing different soils
+
+For deep water tables (10 m) the three soil types don't differ.
+For shallow water tables (1 m), the highest longterm capillary rise (30 mm) and highest plant biomass (150 g/m^2) is found for sandy clay loam,
+soil moisture stabilizes at about 10 mm. The smallest capillary rise and plant biomass is found for heavy medium clay. Coarse sand and clay show the same amount of soil moisture, whereas coarse sand is able to maintain higher plant biomass as a result of higher capillary rise than clay.
+Rise in salt is not effected by soil type nor by distance to the groundwater table.
