@@ -334,9 +334,9 @@ if (plotit==T) {
     lines(flux,type="l", col="orange")
   
  
- legend("topright", title="Variables",cex=1, pt.cex=0.2, c("Moisture [mm]","Rainfall [mm]*10","overland flow depth[mm] ","salt mass in soil water [g]", "salt concentration in soil water [g/l]", "Plant biomass density [g/m^2]/10"),
-         col=c("black","skyblue","blue","red","purple","green"),lty=1)
- 
+#  legend("topright", title="Variables",cex=1, pt.cex=0.2, c("Moisture [mm]","Rainfall [mm]*10","overland flow depth[mm] ","salt mass in soil water [g]", "salt concentration in soil water [g/l]", "Plant biomass density [g/m^2]/10"),
+#          col=c("black","skyblue","blue","red","purple","green"),lty=1)
+#  
 }
 
 Out <- data.frame(P=P,M=M,h=h, CM=CM, SmM=SmM, In=In, flux=flux, Svir=Svir)
