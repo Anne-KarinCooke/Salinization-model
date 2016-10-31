@@ -44,7 +44,7 @@ Soil properties were derived from standard Australian soils in Neurotheta (Minas
    hb = psi_s_bar*-10^5 # mm
  
 
-  Z =3000 # [mm] actual groundwater depth 
+  Z =1000 # [mm] actual groundwater depth 
 
 # parameters describing the soil
   soilpar <- list(b = b, n = n, s_fc = s_fc, K_s = K_s, 
@@ -72,7 +72,7 @@ Soil properties were derived from standard Australian soils in Neurotheta (Minas
   f= 0.8  # f is the soil salt leaching efficiency (whether some salt is retained)
   ConcConst = 0.1 # ConcConst is the concentration of the salt in the infiltrating water in g/l
   CM.gw = 0.1 # salt concentration in groundwater
-  d=0.24 # fraction of plant mortality
+  d=0.24# fraction of plant mortality
   
   par <- list(alpha_i=alpha_i,k=k, W0=W0, gmax=gmax, k1=k1, c=c, f=f, ConcConst=ConcConst, CM.gw= CM.gw, d=d)
 ```
@@ -253,6 +253,32 @@ ifelse(h_sub[tt+1]<soilpar$K_s, soilpar$alpha_i <- 1, soilpar$alpha_i<- (1-(h_su
 
       M_sub[tt + 1] <- M.old + I_sub[tt]      
       
+# # Now do all plant uptake and growth
+# # water uptake by plants: include infiltration in available water
+# 
+#       WU_sub[tt] <- WU(M=Svir.old,P.old,par)*timeincr 
+#       
+#       # growth rate
+#       Gr_sub[tt] <- Gr(M=Svir.old, P.old,par)*timeincr 
+#       # Mortality
+#       Mo_sub[tt]<- Mo(P.old,M=M.old, Svir=Svir.old, par)*timeincr
+#       # calculate plant biomass balance
+#       P_sub[tt + 1] <- P.old + Gr_sub[tt]- Mo_sub[tt] 
+      
+      
+# re-calculate water balance
+# 2. before leaching
+#       M_sub[tt + 1] <- M.old + I_sub[tt] - WU_sub[tt] #- L_sub[tt] 
+
+# Calculate salt concentration in the soil
+
+ # 3. calculate leaching and capillary rise amount
+  flux_sub[tt+1]<-do.call(L_n,list(M=M_sub[tt+1],Z=Z,soilpar=soilpar,vegpar=vegpar))
+
+# 4. final adjust soil moisture for leaching or capillary rise
+ 
+   M_sub[tt + 1] <-  M_sub[tt + 1] + flux_sub[tt+1]*timeincr
+
 # Now do all plant uptake and growth
 # water uptake by plants: include infiltration in available water
 
@@ -264,21 +290,8 @@ ifelse(h_sub[tt+1]<soilpar$K_s, soilpar$alpha_i <- 1, soilpar$alpha_i<- (1-(h_su
       Mo_sub[tt]<- Mo(P.old,M=M.old, Svir=Svir.old, par)*timeincr
       # calculate plant biomass balance
       P_sub[tt + 1] <- P.old + Gr_sub[tt]- Mo_sub[tt] 
-      
-      
-# re-calculate water balance
-# 2. before leaching
-      M_sub[tt + 1] <- M.old + I_sub[tt] - WU_sub[tt] #- L_sub[tt] 
 
-# Calculate salt concentration in the soil
-
- # 3. calculate leaching and capillary rise amount
-  flux_sub[tt+1]<-do.call(L_n,list(M=M_sub[tt+1],Z=Z,soilpar=soilpar,vegpar=vegpar))
-
-# 4. final adjust soil moisture for leaching or capillary rise
- 
-   M_sub[tt + 1] <-  M_sub[tt + 1] + flux_sub[tt+1]*timeincr
-
+ M_sub[tt + 1] <- M.old  - WU_sub[tt]
 
 # calculate saltbalance
 

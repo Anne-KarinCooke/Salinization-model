@@ -62,29 +62,29 @@ par <- list(alpha_i=alpha_i,k=k, W0=W0, gmax=gmax, k1=k1, c=c, f=f, ConcConst=Co
 # ..............................................
 
 # Develop a storage data frame
-runs = 10
+runs = 50
 
 par_MC <- as.data.frame(matrix(0,nrow=runs,ncol=nrow(MC_par), byrow=F))
 colnames(par_MC) <- MC_par[,1]
-set.seed(10)
+set.seed(runs)
 for (i in 1:nrow(MC_par)) {
   par_MC[,i] <- runif(runs,MC_par[i,2],MC_par[i,3])
 }
-
 
 Store <- data.frame(par_MC,meanM = numeric(length=runs),sdM = numeric(length=runs),
                     meanSmM = numeric(length=runs),sdSmM = numeric(length=runs),
                     cum_flux = numeric(length=runs),Pzero=numeric(length=runs))
 time <- 600
 delta <- 0
+system.time(
 for (j in 1:runs) {
   alpha <- Store$alpha[j]
   lambda <- Store$lambda[j]
   Rain <- Precip(time,alpha,lambda,delta)
   vegpar$Zr <- Store$Zr[j]
   par$d <- Store$d[j]
-  par$C <- Store$C[j]
-  par$Cgw <- Store$Cgw[j]
+  par$ConcConst <- Store$ConcConst[j]
+  par$CM.gw <- Store$CM.gw[j]
   par$c <- Store$c[j]
   Z=Store$Z[j]
   result <- balances(Rain,plotit=T, par=par,soilpar, vegpar)
@@ -95,4 +95,8 @@ for (j in 1:runs) {
  Store$sdSmM[j] <- sd(result$SmM[200:600]) 
  Store$cum_flux[j] <- sum(result$flux[200:600]) 
  Store$Pzero[j] <- ifelse(any(result$P[200:600]==0),1,0)
+ 
 }
+)
+
+
