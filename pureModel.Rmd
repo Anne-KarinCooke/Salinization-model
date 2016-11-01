@@ -107,7 +107,7 @@ WU <- function(M,P,par){
 L_n <- function(M,Z,soilpar,vegpar) {
    Zr <- vegpar$Zr
    hb <- - soilpar$psi_s_bar*10^5 # (mm?)
-   soilpar$s_fc <- (Z/hb)^(-1/soilpar$b)
+   #soilpar$s_fc <- (Z/hb)^(-1/soilpar$b)
    
    s=M/(soilpar$n*vegpar$Zr)
   
@@ -239,20 +239,17 @@ balances <- function(Rain, par, plotit=T,
       Svir.old <-ifelse(tt==1,Svir[t-1],Svir_sub[tt])
 
 
-# Balance for water depth on soil
+  # Balance for water depth on soil
+  h_sub[tt+1] <- h.old + ifelse(tt==1,(10*Rain[t]),0) 
+      #- Infil(h.old, P.old,par)*timeincr
 
+  # Infiltration
+  par$alpha_i <- ifelse(h_sub[tt+1]<soilpar$K_s*timeincr, 1,
+                      (1-(h_sub[tt+1]-soilpar$K_s*timeincr)/h_sub[tt+1]))
+  # Calculate infiltration and recalculate h_sub   
+  I_sub[tt] <- Infil(h.old, P.old,par)*timeincr
+  h_sub[tt+1] <- h_sub[tt+1] - I_sub[tt] 
 
-h_sub[tt+1] <- h.old + ifelse(tt==1,(10*Rain[t]),0) - Infil(h.old, P.old,par)*timeincr
-
-# Infiltration
-ifelse(h_sub[tt+1]<soilpar$K_s, soilpar$alpha_i <- 1, soilpar$alpha_i<- (1-(h_sub[tt+1]-soilpar$K_s)/h_sub[tt+1]))
-     
-       I_sub[tt] <- Infil(h.old, P.old,par)*timeincr
-
-#  1. Update soil moisture with infiltration
-
-      M_sub[tt + 1] <- M.old + I_sub[tt]      
-      
 # Now do all plant uptake and growth
 # water uptake by plants: include infiltration in available water
 
@@ -264,18 +261,14 @@ ifelse(h_sub[tt+1]<soilpar$K_s, soilpar$alpha_i <- 1, soilpar$alpha_i<- (1-(h_su
       Mo_sub[tt]<- Mo(P.old,M=M.old, Svir=Svir.old, par)*timeincr
       # calculate plant biomass balance
       P_sub[tt + 1] <- P.old + Gr_sub[tt]- Mo_sub[tt] 
-      
-      
-# re-calculate water balance
-# 2. before leaching
-      M_sub[tt + 1] <- M.old + I_sub[tt] - WU_sub[tt] #- L_sub[tt] 
 
-# Calculate salt concentration in the soil
-
- # 3. calculate leaching and capillary rise amount
+ # 1. Update soil moisture with infiltration
+      M_sub[tt + 1] <- M.old + I_sub[tt] - WU_sub[tt]      
+      
+ # 2. calculate leaching and capillary rise amount
   flux_sub[tt+1]<-do.call(L_n,list(M=M_sub[tt+1],Z=Z,soilpar=soilpar,vegpar=vegpar))
 
-# 4. final adjust soil moisture for leaching or capillary rise
+# 3. final adjust soil moisture for leaching or capillary rise
  
    M_sub[tt + 1] <-  M_sub[tt + 1] + flux_sub[tt+1]*timeincr
 
@@ -283,17 +276,21 @@ ifelse(h_sub[tt+1]<soilpar$K_s, soilpar$alpha_i <- 1, soilpar$alpha_i<- (1-(h_su
 # calculate saltbalance
 
 # Salt leaching
-    L_salt[tt+1] <- ifelse(flux_sub[tt+1]<0, par$f*CM_sub[tt+1]*flux_sub[tt+1]*timeincr,0) # leaching of salt
+    L_salt[tt+1] <- ifelse(flux_sub[tt+1]<0,
+                           par$f*CM_sub[tt+1]*flux_sub[tt+1]*timeincr,0)
+    # leaching of salt
 
 # salt upflow
-    U_salt[tt+1] <- ifelse(flux_sub[tt+1]>0, par$CM.gw*flux_sub[tt+1]*timeincr,0) # rise of salt
+    U_salt[tt+1] <- ifelse(flux_sub[tt+1]>0, 
+                           par$CM.gw*flux_sub[tt+1]*timeincr,0) 
+    # rise of salt
 
 # salt mass coming in with infiltration
       SmI_sub[tt+1]<- SmI.old + I_sub[tt]*par$ConcConst 
 
 #salt mass in soil
      SmM_sub[tt+1] <- SmI_sub[tt+1] + U_salt[tt+1] - L_salt[tt+1]
-# salt concentration in soil
+# Calculate salt concentration in the soil
    CM_sub[tt+1]<- (SmM_sub[tt+1]/M_sub[tt+1])*(1/58.44) # 
     
 # Virtual saturation (Shah et al., 2012), here in [mm] to be in the same unit as M
@@ -322,7 +319,7 @@ ifelse(h_sub[tt+1]<soilpar$K_s, soilpar$alpha_i <- 1, soilpar$alpha_i<- (1-(h_su
 # Plotting
  
 if (plotit==T) {  
-  plot(M, type="l",ylim=c(-10,100),xlim=c(0,time),xlab=("time [d]"), main=paste(" lambda=", lambda[j],"alpha=", alpha[i]))
+  plot(M, type="l",ylim=c(-1,10),xlim=c(0,time),xlab=("time [d]"), main=paste(" lambda=", lambda[j],"alpha=", alpha[i]))
   points(Rain*10, type="h", col="skyblue")
    
     lines(h,type="l", col="blue")
