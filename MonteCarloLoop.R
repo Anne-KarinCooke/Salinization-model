@@ -62,7 +62,7 @@ par <- list(alpha_i=alpha_i,k=k, W0=W0, gmax=gmax, k1=k1, c=c, f=f, ConcConst=Co
 # ..............................................
 
 # Develop a storage data frame
-runs = 50
+runs = 10
 
 par_MC <- as.data.frame(matrix(0,nrow=runs,ncol=nrow(MC_par), byrow=F))
 colnames(par_MC) <- MC_par[,1]
@@ -73,6 +73,9 @@ for (i in 1:nrow(MC_par)) {
 
 Store <- data.frame(par_MC,meanM = numeric(length=runs),sdM = numeric(length=runs),
                     meanSmM = numeric(length=runs),sdSmM = numeric(length=runs),
+                    meanP = numeric(length=runs), sdP = numeric(length=runs),
+                    meanCM = numeric(length=runs), sdCM = numeric(length=runs),
+                    minCM = numeric(length=runs), maxCM = numeric(length=runs),
                     cum_flux = numeric(length=runs),Pzero=numeric(length=runs))
 time <- 600
 delta <- 0
@@ -89,13 +92,34 @@ for (j in 1:runs) {
   Z=Store$Z[j]
   result <- balances(Rain,plotit=T, par=par,soilpar, vegpar)
   
+  
+  # mean and standard deviation of SOIL MOSTURE
  Store$meanM[j] <- mean(result$M[200:600]) 
- Store$sdM[j] <- sd(result$M[200:600]) 
+  Store$sdM[j] <- sd(result$M[200:600]) 
+ 
+ 
+ # mean and standard deviation of SOIL SALT MASS
  Store$meanSmM[j] <- mean(result$SmM[200:600]) 
  Store$sdSmM[j] <- sd(result$SmM[200:600]) 
- Store$cum_flux[j] <- sum(result$flux[200:600]) 
+ 
+ 
+ # mean and standard deviation of PLANT BIOMASS
+ Store$meanP[j] <- mean(result$P[200:600]) 
+ Store$sdP[j] <- sd(result$P[200:600]) 
+ #events where P (plant biomass) hits 0, plants die
  Store$Pzero[j] <- ifelse(any(result$P[200:600]==0),1,0)
  
+ 
+ # mean, standard deviation, minima and maxima of SOIL SALT CONCENTRATION
+ Store$meanCM[j] <- mean(result$CM[200:600]) 
+ Store$sdCM[j] <- sd(result$CM[200:600])
+ Store$minCM[j] <- min(result$CM[200:600])
+ Store$maxCM[j] <- max(result$CM[200:600])
+ 
+ 
+ # sum of cumulative water flux
+ Store$cum_flux[j] <- sum(result$flux[200:600]) 
+
 }
 )
 

@@ -188,7 +188,7 @@ $(document).ready(function () {
   par &lt;- list(alpha_i=alpha_i,k=k, W0=W0, gmax=gmax, k1=k1, c=c, f=f, ConcConst=ConcConst, CM.gw= CM.gw, d=d)</code></pre>
 </div>
 <div id="infiltration-function" class="section level2">
-<h2>Infiltration function</h2>
+<h2>## Infiltration function</h2>
 <pre class="r"><code>Infil &lt;- function(h,P, par){
   
   I=par$alpha_i*h*(P+par$k*par$W0)/(P+par$k)
