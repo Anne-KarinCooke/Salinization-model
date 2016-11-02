@@ -85,7 +85,7 @@ Soil properties were derived from standard Australian soils in Neurotheta (Minas
   gmax=0.05 # Saco et al, 2013
   k1=5 # Saco et al, 2013
   c=10  # Saco et al, 2013
-  f= 0.4  # f is the soil salt leaching efficiency (whether some salt is retained)
+  f= 1  # f is the soil salt leaching efficiency (whether some salt is retained)
   ConcConst = 0.01 # ConcConst is the concentration of the salt in the infiltrating water in g/l
   CM.gw = 0.1 # salt concentration in groundwater
   d=0.24 # fraction of plant mortality
@@ -148,7 +148,7 @@ Mo <- function(P,par) {
 L_n <- function(M,Z,soilpar,vegpar) {
    Zr <- vegpar$Zr
    hb <- - soilpar$psi_s_bar*10^5 # (mm?)
-   soilpar$s_fc <- (Z/hb)^(-1/soilpar$b)
+#    soilpar$s_fc <- (Z/hb)^(-1/soilpar$b)
    
    s=M/(soilpar$n*vegpar$Zr)
   
@@ -245,15 +245,18 @@ balances <- function(Rain, par, plotit=T,
 # Balance for water depth on soil
 
 
-h_sub[tt+1] <- h.old + ifelse(tt==1,(10*Rain[t]),0) - Infil(h.old, P.old,par)*timeincr
+ # Balance for water depth on soil
+  h_sub[tt+1] <- h.old + ifelse(tt==1,(10*Rain[t]),0) 
+      #- Infil(h.old, P.old,par)*timeincr
 
-# Infiltration
+  # Infiltration
+  par$alpha_i <- ifelse(h_sub[tt+1]<soilpar$K_s*timeincr, 1,
+                      (1-(h_sub[tt+1]-soilpar$K_s*timeincr)/h_sub[tt+1]))
+  # Calculate infiltration and recalculate h_sub   
+  I_sub[tt] <- Infil(h.old, P.old,par)*timeincr
+  h_sub[tt+1] <- h_sub[tt+1] - I_sub[tt] 
 
-      I_sub[tt] <- Infil(h.old, P.old,par)*timeincr
-
-#  1. Update soil moisture with infiltration
-
-      M_sub[tt + 1] <- M.old + I_sub[tt]      
+ 
       
 # Now do all plant uptake and growth
 # water uptake by plants: include infiltration in available water
@@ -534,16 +537,19 @@ balances <- function(Rain, par, plotit=T,
 
 # Balance for water depth on soil
 
+ # Balance for water depth on soil
+  h_sub[tt+1] <- h.old + ifelse(tt==1,(10*Rain[t]),0) 
+      #- Infil(h.old, P.old,par)*timeincr
 
-h_sub[tt+1] <- h.old + ifelse(tt==1,(10*Rain[t]),0) - Infil(h.old, P.old,par)*timeincr
+  # Infiltration
+  par$alpha_i <- ifelse(h_sub[tt+1]<soilpar$K_s*timeincr, 1,
+                      (1-(h_sub[tt+1]-soilpar$K_s*timeincr)/h_sub[tt+1]))
+  # Calculate infiltration and recalculate h_sub   
+  I_sub[tt] <- Infil(h.old, P.old,par)*timeincr
+  h_sub[tt+1] <- h_sub[tt+1] - I_sub[tt] 
 
-# Infiltration
-
-      I_sub[tt] <- Infil(h.old, P.old,par)*timeincr
-
-#  1. Update soil moisture with infiltration
-
-      M_sub[tt + 1] <- M.old + I_sub[tt]      
+ 
+      
       
 # Now do all plant uptake and growth
 # water uptake by plants: include infiltration in available water

@@ -53,7 +53,7 @@ W0=0.2 # Saco et al, 2013
 gmax=0.05 # Saco et al, 2013
 k1=5 # Saco et al, 2013
 c=10  # Saco et al, 2013
-f= 0.8  # f is the soil salt leaching efficiency (whether some salt is retained)
+f= 1  # f is the soil salt leaching efficiency (whether some salt is retained)
 ConcConst = 0.1 # ConcConst is the concentration of the salt in the infiltrating water in g/l
 CM.gw = 0.1 # salt concentration in groundwater
 d=0.24 # fraction of plant mortality
@@ -67,9 +67,24 @@ runs = 10
 par_MC <- as.data.frame(matrix(0,nrow=runs,ncol=nrow(MC_par), byrow=F))
 colnames(par_MC) <- MC_par[,1]
 set.seed(runs)
+
+# # Lognormal distribution parameter logmean
+# mu <-function(m,v){
+#   mu <- log(m/(sqrt(1+(v/(m*m)))))
+#   return(mu)
+# }
+# # Lognormal distribution parameter logsd
+# sigma <-function(m,v){
+#   sigma <- sqrt(log(1+(v/(m*m))))
+#   return(sigma)
+# }
+
 for (i in 1:nrow(MC_par)) {
   par_MC[,i] <- runif(runs,MC_par[i,2],MC_par[i,3])
+  par_MC[,2] <- rlnorm(runs,mu(400,5000), sigma(400,5000))
+  par_MC[,3] <- rlnorm(runs,mu(0.1,0.1), sigma(0.1,0.1))
 }
+
 
 Store <- data.frame(par_MC,meanM = numeric(length=runs),sdM = numeric(length=runs),
                     meanSmM = numeric(length=runs),sdSmM = numeric(length=runs),
@@ -77,9 +92,13 @@ Store <- data.frame(par_MC,meanM = numeric(length=runs),sdM = numeric(length=run
                     meanCM = numeric(length=runs), sdCM = numeric(length=runs),
                     minCM = numeric(length=runs), maxCM = numeric(length=runs),
                     cum_flux = numeric(length=runs),Pzero=numeric(length=runs))
-time <- 600
+
+ Store_failure <- data.frame()
+
+
+time <- 1000
 delta <- 0
-system.time(
+# system.time(
 for (j in 1:runs) {
   alpha <- Store$alpha[j]
   lambda <- Store$lambda[j]
@@ -94,33 +113,38 @@ for (j in 1:runs) {
   
   
   # mean and standard deviation of SOIL MOSTURE
- Store$meanM[j] <- mean(result$M[200:600]) 
-  Store$sdM[j] <- sd(result$M[200:600]) 
+ Store$meanM[j] <- mean(result$M[200:time]) 
+  Store$sdM[j] <- sd(result$M[200:time]) 
  
  
  # mean and standard deviation of SOIL SALT MASS
- Store$meanSmM[j] <- mean(result$SmM[200:600]) 
- Store$sdSmM[j] <- sd(result$SmM[200:600]) 
+ Store$meanSmM[j] <- mean(result$SmM[200:time]) 
+ Store$sdSmM[j] <- sd(result$SmM[200:time]) 
  
  
  # mean and standard deviation of PLANT BIOMASS
- Store$meanP[j] <- mean(result$P[200:600]) 
- Store$sdP[j] <- sd(result$P[200:600]) 
+ Store$meanP[j] <- mean(result$P[200:time]) 
+ Store$sdP[j] <- sd(result$P[200:time]) 
  #events where P (plant biomass) hits 0, plants die
- Store$Pzero[j] <- ifelse(any(result$P[200:600]==0),1,0)
+ Store$Pzero[j] <- ifelse(any(result$P[200:time]==0),1,0)
  
  
  # mean, standard deviation, minima and maxima of SOIL SALT CONCENTRATION
- Store$meanCM[j] <- mean(result$CM[200:600]) 
- Store$sdCM[j] <- sd(result$CM[200:600])
- Store$minCM[j] <- min(result$CM[200:600])
- Store$maxCM[j] <- max(result$CM[200:600])
+ Store$meanCM[j] <- mean(result$CM[200:time]) 
+ Store$sdCM[j] <- sd(result$CM[200:time])
+ Store$minCM[j] <- min(result$CM[200:time])
+ Store$maxCM[j] <- max(result$CM[200:time])
  
  
  # sum of cumulative water flux
- Store$cum_flux[j] <- sum(result$flux[200:600]) 
-
+ Store$cum_flux[j] <- sum(result$flux[200:time]) 
+ 
+ if(is.na(Store$Pzero[j])){
+   Store_failure <- rbind(Store_failure, Store[j])
+   Store<-Store[-j]
+ }
+# )
 }
-)
+
 
 

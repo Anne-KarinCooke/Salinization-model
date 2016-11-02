@@ -146,16 +146,17 @@ balances <- function(Rain, par, plotit=T,
       # Balance for water depth on soil
       
       
-      h_sub[tt+1] <- h.old + ifelse(tt==1,(10*Rain[t]),0) - Infil(h.old, P.old,par)*timeincr
+      # Balance for water depth on soil
+      h_sub[tt+1] <- h.old + ifelse(tt==1,(10*Rain[t]),0) 
+      #- Infil(h.old, P.old,par)*timeincr
       
       # Infiltration
-      ifelse(h_sub[tt+1]<soilpar$K_s, soilpar$alpha_i <- 1, soilpar$alpha_i<- (1-(h_sub[tt+1]-soilpar$K_s)/h_sub[tt+1]))
-      
+      par$alpha_i <- ifelse(h_sub[tt+1]<soilpar$K_s*timeincr, 1,
+                            (1-(h_sub[tt+1]-soilpar$K_s*timeincr)/h_sub[tt+1]))
+      # Calculate infiltration and recalculate h_sub   
       I_sub[tt] <- Infil(h.old, P.old,par)*timeincr
+      h_sub[tt+1] <- h_sub[tt+1] - I_sub[tt] 
       
-      #  1. Update soil moisture with infiltration
-      
-      M_sub[tt + 1] <- M.old + I_sub[tt]      
       
       # Now do all plant uptake and growth
       # water uptake by plants: include infiltration in available water
