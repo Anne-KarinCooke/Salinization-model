@@ -1,8 +1,8 @@
 
 ---
-title: 'Testing 3 different groundwater tables'
-author: 'Anne-Karin Cooke'
-output: html_document
+title: "Testing 3 different groundwater tables"
+author: "Anne-Karin Cooke"
+output: word_document
 ---
 
 ## Experiments          
@@ -56,7 +56,7 @@ Soil properties were derived from standard Australian soils in Neurotheta (Minas
    hb = psi_s_bar*-10^5
  
 
-  Zmax =1000 # [cm] maximum GROUNDWATER DEPTH
+
   Z =1000 # [cm] actual groundwater depth 
 
 # parameters describing the soil
@@ -82,7 +82,7 @@ Soil properties were derived from standard Australian soils in Neurotheta (Minas
   gmax=0.05 # Saco et al, 2013
   k1=5 # Saco et al, 2013
   c=10  # Saco et al, 2013
-  f= 0.4  # f is the soil salt leaching efficiency (whether some salt is retained)
+  f= 1  # f is the soil salt leaching efficiency (whether some salt is retained)
   ConcConst = 0.01 # ConcConst is the concentration of the salt in the infiltrating water in g/l
   CM.gw = 0.1 # salt concentration in groundwater
   d=0.24 # fraction of plant mortality
@@ -127,35 +127,23 @@ Precip <- function(time,alpha,lambda,delta) {
 ```{r VerticalFlux}
 #******************************************
 # based on Salvucci, 1993
-L_n <- function(M,Z,Zmax,soilpar,vegpar) {
+L_n <- function(M,Z,soilpar,vegpar) {
    Zr <- vegpar$Zr
    hb <- - soilpar$psi_s_bar*10^5 # (mm?)
-   soilpar$s_fc <- (Z/hb)^(-1/soilpar$b)
+#    soilpar$s_fc <- (Z/hb)^(-1/soilpar$b)
    
    s=M/(soilpar$n*vegpar$Zr)
   
    psi = hb*s^-soilpar$b
  
-#   hb <- hb*soilpar$n
-#  hb_nd <- hb/psi # non-dim hb
-   m=2 + 3/soilpar$b#5.64  # in Salvucci's paper it is called n, but I called it m here to not confuse it with porosity
-   #m=3.3 # 3.3 for clay, 5.64 for silt-loam, 11.88 for sand-loam 
 
-
-Znd <- Z/Zmax  # a non-dimensional Znd between 0 and 1 is defined, e.g. Zmax=10 m, Z= 1 m, Znd=0.1
-
-
-#non-dimensional form of the flow rate equation  #nd flow rate
-# qtot <- -soilpar$K_s*((z/hb)^(-n)-(s^-soilpar$b)^(-n))/(1+(s^-soilpar$b)^        (-n)+(n-1)*(z/hb)^(-n))/(soilpar$n*vegpar$Zr)
+   m=2 + 3/soilpar$b
 
 q <-((Z/hb)^(-m)-(psi/hb)^(-m))/(1+(psi/hb)^(-m)+(m-1)*(Z/hb)^(-m))#/(soilpar$n*Zr) # 
-#q <-((((Znd/hb_nd)^-m)-((psi/hb)^-m))/((1+((psi/hb)^-m))+((m-1)*((Znd/hb_nd#)^-m)))) # 
-# q <-((((Znd/hb_nd)^-m)-((psi/hb)^-m))/((1+((psi/hb)^-m))+((m-1)*((Znd/hb_nd)^-m)))) # 
 
 # Mass flux
-#browser()
+
 flux <- soilpar$K_s*q
-#flux<-ifelse(s<soilpar$s_fc, abs(flux), -abs(flux))
 
 
 return(flux)
@@ -271,16 +259,16 @@ balances <- function(Rain, par, plotit=T,
 
 
 # Balance for water depth on soil
+  h_sub[tt+1] <- h.old + ifelse(tt==1,(10*Rain[t]),0) 
+      #- Infil(h.old, P.old,par)*timeincr
 
-h_sub[tt+1] <- h.old + ifelse(tt==1,(10*Rain[t]),0) - Infil(h.old, P.old,par)*timeincr #- Ep*timeincr
-
-# Infiltration
-
-      I_sub[tt] <- Infil(h.old, P.old,par)*timeincr
-
-#  1. Update soil moisture with infiltration
-
-      M_sub[tt + 1] <- M.old + I_sub[tt]      
+  # Infiltration
+  par$alpha_i <- ifelse(h_sub[tt+1]<soilpar$K_s*timeincr, 1,
+                      (1-(h_sub[tt+1]-soilpar$K_s*timeincr)/h_sub[tt+1]))
+  # Calculate infiltration and recalculate h_sub   
+  I_sub[tt] <- Infil(h.old, P.old,par)*timeincr
+  h_sub[tt+1] <- h_sub[tt+1] - I_sub[tt] 
+    
       
 # Now do all plant uptake and growth
 # water uptake by plants: include infiltration in available water
@@ -302,7 +290,7 @@ h_sub[tt+1] <- h.old + ifelse(tt==1,(10*Rain[t]),0) - Infil(h.old, P.old,par)*ti
 # Calculate salt concentration in the soil
 
  # 3. calculate leaching and capillary rise amount
-  flux_sub[tt+1]<-do.call(L_n,list(M=M_sub[tt+1],Z=Z, Zmax=Zmax,soilpar=soilpar,vegpar=vegpar))
+  flux_sub[tt+1]<-do.call(L_n,list(M=M_sub[tt+1],Z=Z,soilpar=soilpar,vegpar=vegpar))
 
 # 4. final adjust soil moisture for leaching or capillary rise
  
