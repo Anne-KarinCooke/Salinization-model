@@ -62,7 +62,7 @@ par <- list(alpha_i=alpha_i,k=k, W0=W0, gmax=gmax, k1=k1, c=c, f=f, ConcConst=Co
 # ..............................................
 
 # Develop a storage data frame
-runs = 10
+runs = 100
 
 par_MC <- as.data.frame(matrix(0,nrow=runs,ncol=nrow(MC_par), byrow=F))
 colnames(par_MC) <- MC_par[,1]
