@@ -1,0 +1,6 @@
+L Med Clay,
+S Clay Loam,
+Loamy Sand,
+H Clay,
+M Clay,
+C Sand

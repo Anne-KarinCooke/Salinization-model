@@ -6,6 +6,7 @@ MC_par <- read.csv("MC_Parameters.txt", header=F)
 
 # source the model functions
 source("modelfunctions.R")
+source("Soil input for MonteCarloop.R")
 
 # ------------------
 # Definitions
@@ -23,7 +24,7 @@ b<-6.4069 # neurotheta sandy clay loam
 # van Genuchten parameters
 #     avg <- 0.0521
 #     nvg <- 1.237
-# s_fc<-0.2677/n # Field capacity _ not used 
+s_fc<-0.2677/n # Field capacity
 # This is the bubbling pressure
 psi_s_bar<--1.2E-3 #
 h1bar =  -psi_s_bar 
@@ -33,7 +34,7 @@ hb = psi_s_bar*-10^5 # mm
 #Z =3000 # [mm] actual groundwater depth 
 
 # parameters describing the soil
-soilpar <- list(b = b, n = n, K_s = K_s, 
+soilpar <- list(b = b, n = n, s_fc = s_fc, K_s = K_s, 
                 psi_s_bar = psi_s_bar, h1bar = h1bar, hb = hb)
 # Vegetation 1 (Grass)
 # paspalum secateum F-I and R-I, 2004
@@ -62,42 +63,64 @@ par <- list(alpha_i=alpha_i,k=k, W0=W0, gmax=gmax, k1=k1, c=c, f=f, ConcConst=Co
 # ..............................................
 
 # Develop a storage data frame
-runs = 50
+runs = 100
 
 par_MC <- as.data.frame(matrix(0,nrow=runs,ncol=nrow(MC_par), byrow=F))
 colnames(par_MC) <- MC_par[,1]
-set.seed(runs)
 
-# Lognormal distribution parameter logmean
-mu <-function(m,v){
-  mu <- log(m/(sqrt(1+(v/(m*m)))))
-  return(mu)
+
+set.seed(runs)
+MC_soilpar <- read.csv("MC_soilnames.txt", header=F)  
+MC_soilpar <- data.frame(MC_soilpar)                   
+MC_soilpar[2,1]
+MC_soilpar
+
+
+soilpar <-as.data.frame(matrix(0,nrow=length(soilpar),ncol=length(MC_soilpar[,1]), byrow=F))
+# soilpar <- Soil(stype=toString(MC_soilpar[i,1]))
+
+# Adding variable soil data, so the runs occur between different soils, too
+
+
+for (i in 1:nrow(MC_soilpar)) {
+
+ soilpar[i,]  <- Soil(stype=toString(MC_soilpar[i,1]))
+
 }
-# Lognormal distribution parameter logsd
-sigma <-function(m,v){
-  sigma <- sqrt(log(1+(v/(m*m))))
-  return(sigma)
-}
+
+
+soilpar <- list(b = b, n = n, s_fc = s_fc, K_s = K_s, 
+                psi_s_bar = psi_s_bar, h1bar = h1bar, hb = hb)
+length(soilpar)
+# # Lognormal distribution parameter logmean
+# mu <-function(m,v){
+#   mu <- log(m/(sqrt(1+(v/(m*m)))))
+#   return(mu)
+# }
+# # Lognormal distribution parameter logsd
+# sigma <-function(m,v){
+#   sigma <- sqrt(log(1+(v/(m*m))))
+#   return(sigma)
+# }
 
 for (i in 1:nrow(MC_par)) {
   par_MC[,i] <- runif(runs,MC_par[i,2],MC_par[i,3])
   par_MC[,2] <- rlnorm(runs,mu(400,5000), sigma(400,5000))
-  par_MC[,3] <- rlnorm(runs,mu(0.24,0.1), sigma(0.24,0.01))
+  par_MC[,3] <- rlnorm(runs,mu(0.1,0.1), sigma(0.1,0.1))
 }
 
 
-Store <- data.frame(par_MC,meanM = numeric(length=runs),sdM = numeric(length=runs),
+Store <- data.frame(soilpar, par_MC,meanM = numeric(length=runs),sdM = numeric(length=runs),
                     meanSmM = numeric(length=runs),sdSmM = numeric(length=runs),
                     meanP = numeric(length=runs), sdP = numeric(length=runs),
                     meanCM = numeric(length=runs), sdCM = numeric(length=runs),
                     minCM = numeric(length=runs), maxCM = numeric(length=runs),
                     cum_flux = numeric(length=runs),Pzero=numeric(length=runs))
 
- Store_failure <- data.frame(matrix(0,nrow=runs, ncol=length(Store)))
+Store_failure <- data.frame()
 
 
 time <- 1000
-
 delta <- 0
 # system.time(
 for (j in 1:runs) {
@@ -114,39 +137,36 @@ for (j in 1:runs) {
   
   
   # mean and standard deviation of SOIL MOSTURE
- Store$meanM[j] <- mean(result$M[200:time]) 
+  Store$meanM[j] <- mean(result$M[200:time]) 
   Store$sdM[j] <- sd(result$M[200:time]) 
- 
- 
- # mean and standard deviation of SOIL SALT MASS
- Store$meanSmM[j] <- mean(result$SmM[200:time]) 
- Store$sdSmM[j] <- sd(result$SmM[200:time]) 
- 
- 
- # mean and standard deviation of PLANT BIOMASS
- Store$meanP[j] <- mean(result$P[200:time]) 
- Store$sdP[j] <- sd(result$P[200:time]) 
- #events where P (plant biomass) hits 0, plants die
- Store$Pzero[j] <- ifelse(any(result$P[200:time]==0),1,0)
- 
- 
- # mean, standard deviation, minima and maxima of SOIL SALT CONCENTRATION
- Store$meanCM[j] <- mean(result$CM[200:time]) 
- Store$sdCM[j] <- sd(result$CM[200:time])
- Store$minCM[j] <- min(result$CM[200:time])
- Store$maxCM[j] <- max(result$CM[200:time])
- 
- 
- # sum of cumulative water flux
- Store$cum_flux[j] <- sum(result$flux[200:time]) 
- 
- if(is.na(Store$Pzero[j])){
-
-   Store_failure[j,] <- Store[j,]
-   Store<-Store[-j]
- }
-# )
+  
+  
+  # mean and standard deviation of SOIL SALT MASS
+  Store$meanSmM[j] <- mean(result$SmM[200:time]) 
+  Store$sdSmM[j] <- sd(result$SmM[200:time]) 
+  
+  
+  # mean and standard deviation of PLANT BIOMASS
+  Store$meanP[j] <- mean(result$P[200:time]) 
+  Store$sdP[j] <- sd(result$P[200:time]) 
+  #events where P (plant biomass) hits 0, plants die
+  Store$Pzero[j] <- ifelse(any(result$P[200:time]==0),1,0)
+  
+  
+  # mean, standard deviation, minima and maxima of SOIL SALT CONCENTRATION
+  Store$meanCM[j] <- mean(result$CM[200:time]) 
+  Store$sdCM[j] <- sd(result$CM[200:time])
+  Store$minCM[j] <- min(result$CM[200:time])
+  Store$maxCM[j] <- max(result$CM[200:time])
+  
+  
+  # sum of cumulative water flux
+  Store$cum_flux[j] <- sum(result$flux[200:time]) 
+  
+  if(is.na(Store$Pzero[j])){
+    Store_failure <- rbind(Store_failure, Store[j])
+    Store<-Store[-j]
+  }
+  # )
 }
-
-
 

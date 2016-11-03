@@ -22,7 +22,7 @@ WU <- function(M,P,par){
 L_n <- function(M,Z,soilpar,vegpar) {
   Zr <- vegpar$Zr
   hb <- - soilpar$psi_s_bar*10^5 # (mm?)
-  soilpar$s_fc <- (Z/hb)^(-1/soilpar$b)
+#   soilpar$s_fc <- (Z/hb)^(-1/soilpar$b)
   
   s=M/(soilpar$n*vegpar$Zr)
   
