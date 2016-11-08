@@ -153,18 +153,16 @@ Soil <- function(stype) {
 
   h1bar =  -psi_s_bar 
   hb = psi_s_bar*-10^5 # mm
+  K_s=10* K_s # mm/day
+
   # Create an output list
 
-  soilpar <- list(b = b, n = n, s_fc = s_fc, K_s = K_s, 
+  soilpar <- list(b = b, n = n, K_s = K_s, 
                   psi_s_bar = psi_s_bar, h1bar = h1bar, hb = hb)
 soilpar <-as.matrix(soilpar)
   
   return(soilpar)
 }
 
- x<-Soil("C Sand")
-x[,1:7]
-x[1:7,]
-# as.matrix(x)
-# x[,1]
-# x[1,]
+
+

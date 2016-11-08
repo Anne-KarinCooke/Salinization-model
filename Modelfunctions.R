@@ -227,7 +227,7 @@ balances <- function(Rain, par, plotit=T,
   # Plotting
   
   if (plotit==T) {  
-    plot(M, type="l",ylim=c(-10,100),xlim=c(0,time),xlab=("time [d]"))
+    plot(M, type="l",ylim=c(-10,200),xlim=c(0,time),xlab=("time [d]"),  main=paste(" run=",j))
     points(Rain*10, type="h", col="skyblue")
     
     lines(h,type="l", col="blue")
@@ -239,9 +239,11 @@ balances <- function(Rain, par, plotit=T,
     lines(flux,type="l", col="orange")
     
     
-    #  legend("topright", title="Variables",cex=1, pt.cex=0.2, c("Moisture [mm]","Rainfall [mm]*10","overland flow depth[mm] ","salt mass in soil water [g]", "salt concentration in soil water [g/l]", "Plant biomass density [g/m^2]/10"),
-    #          col=c("black","skyblue","blue","red","purple","green"),lty=1)
-    #  
+     legend("topright", title="Variables",cex=1, pt.cex=0.2, c("Moisture [mm]","Rainfall [mm]*10","overland flow depth[mm] ","salt mass in soil water [g]", "salt concentration in soil water [Mol/l]", "Plant biomass density [g/m^2]/10", "flux [mm]"),
+             col=c("black","skyblue","blue","red","purple","green", "orange"),lty=1)
+    
+  
+     
   }
   
   Out <- data.frame(P=P,M=M,h=h, CM=CM, SmM=SmM, In=In, flux=flux, Svir=Svir)

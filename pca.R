@@ -4,15 +4,14 @@
 
 # Store_pca <- Store[9:19]
 # head(Store_pca)
-
+Store
 
 pca <- prcomp(Store[-20], scale. = T)
 
 summary(pca)
 pca
 
-pca
-pca <-pca$rotation[9:19,9:19]
+pca_rot <-pca$rotation[9:19,9:19]
 
 # Eigenvalues
 eig <- (pca$sdev)^2
