@@ -8,7 +8,7 @@ MC_par <- read.csv("MC_Parameters.txt", header=F)
 source("modelfunctions.R")
 source("Soil input for MonteCarloop.R")
 
-Z=1000 #mm
+# Z=1000 #mm
 vegpar <- list(Zr = Zr)
 
 alpha_i=1 #maximum infiltration rate per day (K_s and therefore soil type dependency in balances function code)
@@ -17,17 +17,17 @@ k=12 # Saco et al, 2013
 W0=0.2 # Saco et al, 2013
 gmax=0.05 # Saco et al, 2013
 k1=5 # Saco et al, 2013
-c=10  # Saco et al, 2013
+# c=10  # Saco et al, 2013
 f= 1  # f is the soil salt leaching efficiency (whether some salt is retained)
-ConcConst = 0.1 # ConcConst is the concentration of the salt in the infiltrating water in g/l
-CM.gw = 0.1 # salt concentration in groundwater
-d=0.24 # fraction of plant mortality
+# ConcConst = 0.1 # ConcConst is the concentration of the salt in the infiltrating water in g/l
+# CM.gw = 0.1 # salt concentration in groundwater
+# d=0.24 # fraction of plant mortality
 
 par <- list(alpha_i=alpha_i,k=k, W0=W0, gmax=gmax, k1=k1, c=c, f=f, ConcConst=ConcConst, CM.gw= CM.gw, d=d)
 # ..............................................
 
 # Develop a storage data frame
-runs = 50
+runs = 1000
 
 par_MC <- as.data.frame(matrix(0,nrow=runs,ncol=nrow(MC_par), byrow=F))
 colnames(par_MC) <- MC_par[,1]
@@ -136,11 +136,7 @@ for (j in 1:runs) {
   # sum of cumulative water flux
   Store$cum_flux[j] <- sum(result$flux[200:time]) 
   
-  # occations where plants die
-  if(is.na(Store$Pzero[j])){
-    Store_failure <- rbind(Store_failure, Store[j,])
-    Store<-Store[-j,]
-  }
+
    
 }
 

@@ -1,17 +1,38 @@
 ### Principal component analysis
 
+#cleaning the data
+##occations where plants die
+for(j in 1:nrow(Store)){
+  if(is.na(Store$Pzero[j])){
+    Store_failure <- rbind(Store_failure, Store[j,])
+    Store<-Store[-j,]
+  }
+}
+
+nrow(Store)
+# -> going to anaylse this later. However there are heaps of fails
+  
+
+head(Store)
+ncol(Store)
 
 
-# Store_pca <- Store[9:19]
-# head(Store_pca)
-Store
+# Scatterplots
+require(car)
+library(car)
+scatterplotMatrix(Store[,15:25])
+scatterplotMatrix(Store[,c(15,17,19,21,23,24,25)])
 
-pca <- prcomp(Store[-20], scale. = T)
+
+# principal component analysis
+pca <- prcomp(Store[,-26], scale. = T) #taking out the Pzero
 
 summary(pca)
-pca
 
-pca_rot <-pca$rotation[9:19,9:19]
+pca$rotation
+pca_rot <-pca$rotation[1:14,15:25]
+pca_rot
+head(pca_rot)
 
 # Eigenvalues
 eig <- (pca$sdev)^2
