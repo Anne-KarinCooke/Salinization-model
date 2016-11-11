@@ -13,19 +13,67 @@ source("modelfunctions.R")
 # ...................
 # Soil and vegetation
 # ...................
-# Sandy Clay Loam
-n<-0.367 # porosity
+# # Sandy Clay Loam
+# n<-0.367 # porosity
+# # more soil variables for evaporation & losses
+# # Hydraulic conductivity
+# K_s<-52.08*10 # mm/day
+# # campbell's b
+# b<-6.4069 # neurotheta sandy clay loam
+# # van Genuchten parameters
+# #     avg <- 0.0521
+# #     nvg <- 1.237
+# # s_fc<-0.2677/n # Field capacity _ not used 
+# # This is the bubbling pressure
+# psi_s_bar<--1.2E-3 #
+# h1bar =  -psi_s_bar 
+# hb = psi_s_bar*-10^5 # mm
+
+Medium Heavy Clay
+n<-0.4473 # porosity
 # more soil variables for evaporation & losses
 # Hydraulic conductivity
-K_s<-52.08*10 # mm/day
-# campbell's b
-b<-6.4069 # neurotheta sandy clay loam
+K_s<-2.82*10 # mm/day
+# Campbell's b
+b<-16.1501 # neurotheta Medium heavy clay
 # van Genuchten parameters
-#     avg <- 0.0521
-#     nvg <- 1.237
-# s_fc<-0.2677/n # Field capacity _ not used 
-# This is the bubbling pressure
-psi_s_bar<--1.2E-3 #
+# avg <- 0.0613
+# nvg <- 1.086
+# s_fc<-0.3936/n # Field capacity
+# bubbling pressure
+psi_s_bar<--1.4E-3 # I
+
+# # Coarse sand
+# n<-0.368 # porosity
+# # more soil variables for evaporation & losses
+# # Hydraulic conductivity
+# K_s<-182.68*10 # mm/day
+# # Campbell's b
+# b<- 4.1152
+# # van Genuchten parameters
+# # avg <- 0.0712   # Soil hydraulic parameters for van Genuchtan function
+# # nvg <- 1.392    # soil hydraulic papameters for van Genuchtan function
+# # s_fc<-0.1895/n # Field capacity
+# 
+# psi_s_bar<--0.61E-3 # 
+# h1bar =  -psi_s_bar 
+# hb = psi_s_bar*-10^5 # mm
+
+# 
+# ### Loamy sand
+# n<-0.37 # porosity
+# # more soil variables for evaporation & losses
+# # Hydraulic conductivity
+# K_s<-175.3 # cm/day
+# # Campbell's b
+# b<-4.5206
+# # Van Genuchten parameters
+# # avg <- 0.0641
+# # nvg <- 1.344
+# # s_fc<-0.2098/n # Field capacity
+# 
+# psi_s_bar<--0.66E-3 # I
+
 h1bar =  -psi_s_bar 
 hb = psi_s_bar*-10^5 # mm
 
@@ -62,7 +110,7 @@ par <- list(alpha_i=alpha_i,k=k, W0=W0, gmax=gmax, k1=k1, c=c, f=f, ConcConst=Co
 # ..............................................
 
 # Develop a storage data frame
-runs = 50
+runs = 5000
 
 par_MC <- as.data.frame(matrix(0,nrow=runs,ncol=nrow(MC_par), byrow=F))
 colnames(par_MC) <- MC_par[,1]
@@ -93,13 +141,13 @@ Store <- data.frame(par_MC,meanM = numeric(length=runs),sdM = numeric(length=run
                     minCM = numeric(length=runs), maxCM = numeric(length=runs),
                     cum_flux = numeric(length=runs),Pzero=numeric(length=runs))
 
- Store_failure <- data.frame(matrix(0,nrow=runs, ncol=length(Store)))
+ Store_failure <- data.frame()
 
 
-time <- 1000
+time <- 800
 
 delta <- 0
-# system.time(
+ system.time(
 for (j in 1:runs) {
   alpha <- Store$alpha[j]
   lambda <- Store$lambda[j]
@@ -140,13 +188,10 @@ for (j in 1:runs) {
  # sum of cumulative water flux
  Store$cum_flux[j] <- sum(result$flux[200:time]) 
  
- if(is.na(Store$Pzero[j])){
 
-   Store_failure[j,] <- Store[j,]
-   Store<-Store[-j]
- }
-# )
+ 
 }
+)
 
-
-
+# SandyClayLoam_failure 
+# Sand_failure<- Store_failure

@@ -92,7 +92,7 @@ Store <- data.frame(soilpar_runs_sample, par_MC,meanM = numeric(length=runs),sdM
 Store_failure <- data.frame()
 
 
-time <- 1000
+time <- 400
 delta <- 0
  system.time(
 for (j in 1:runs) {
@@ -136,8 +136,6 @@ for (j in 1:runs) {
   # sum of cumulative water flux
   Store$cum_flux[j] <- sum(result$flux[200:time]) 
   
-
-   
 }
 
 )

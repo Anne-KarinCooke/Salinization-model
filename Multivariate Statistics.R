@@ -1,7 +1,7 @@
 ### Principal component analysis
 
 #cleaning the data
-##occations where plants die
+##occations where plants die as an indicator (goes NA, if model crashes)
 for(j in 1:nrow(Store)){
   if(is.na(Store$Pzero[j])){
     Store_failure <- rbind(Store_failure, Store[j,])
@@ -9,45 +9,41 @@ for(j in 1:nrow(Store)){
   }
 }
 
-Store_failure_real <-Store_failure[1:227,]
-Zm <- mean(Store_failure_real[,7])
-Zrm <- mean(Store_failure_real[,8])
-dm <- mean(Store_failure_real[,9])
-Concm <- mean(Store_failure_real[,11])
-
-for(i in 2:14){
-  hist(Store_failure_real[,i]) 
-}
-hist(Store_failure_real[,3]) 
-hist(Store_failure_real[,14]) 
-
-head(Store_failure_real)
-nrow(Store)
-# -> going to anaylse this later. However there are heaps of fails
-  
-
-head(Store)
-ncol(Store)
-
-stuff <- Store
-mydata <- stuff
+# no crashes in Store! :D Store.txt in the repo is a Monte Carlo simulation with Heavy clay, 800 days and 5000 runs
+# 
+# nrow(Store)
+# head(Store)
+# ncol(Store)
 
 
-mydata <-mydata[c(1,2,3,4,7,8,9,10,11,12,13,14,15,17,19,21,23,23,25)]
+######################################################################################
+##
+
+mydata <- Store
+
+
+# mydata <-mydata[c(1,2,3,4,7,8,9,10,11,12,13,14,15,17,19,21,23,23,25)]
       
- head(mydata)     
-      
+### CLUSTER ANALYSIS      
 
 mydata <- scale(mydata) # standardize variables
 
 
 
 # Determine number of clusters
-wss <- (nrow(mydata)-1)*sum(apply(mydata,2,var))
-for (i in 2:15) wss[i] <- sum(kmeans(mydata, 
-                                     centers=i)$withinss)
-plot(1:15, wss, type="b", xlab="Number of Clusters",
-     ylab="Within groups sum of squares")
+# wss <- (nrow(mydata)-1)*sum(apply(mydata,2,var))
+# for (i in 2:15) wss[i] <- sum(kmeans(mydata, 
+#                                      centers=i)$withinss)
+# plot(1:15, wss, type="b", xlab="Number of Clusters",
+#      ylab="Within groups sum of squares")
+# 
+# 
+
+#hierarchical clustering
+clusters <- hclust(dist(mydata))
+plot(clusters)
+
+clusterCut <- cutree(clusters, 6)
 
 
 
@@ -59,7 +55,7 @@ aggregate(mydata,by=list(fit$cluster),FUN=mean)
 mydata1 <- data.frame(mydata, fit$cluster)
 
 # K-Means Clustering with 14 clusters
-fit <- kmeans(mydata1, 5)
+fit <- kmeans(mydata1, 14)
 
 # Cluster Plot against 1st 2 principal components
 
@@ -72,11 +68,6 @@ clusplot(mydata1, fit$cluster, color=TRUE, shade=TRUE,
 library(fpc)
 plotcluster(mydata1, fit$cluster)
 
-#hierarchical clustering
-clusters <- hclust(dist(mydata))
-plot(clusters)
-
-clusterCut <- cutree(clusters, 6)
 
 
 # Ward Hierarchical Clustering
@@ -106,11 +97,6 @@ plot(fit) # plot results
 summary(fit) # display the best model
 
 
-# Scatterplots
-require(car)
-library(car)
-scatterplotMatrix(Store[,15:25])
-scatterplotMatrix(Store[,c(15,17,19,21,23,24,25)])
 
 
 
