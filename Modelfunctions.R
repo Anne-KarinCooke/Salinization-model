@@ -226,7 +226,12 @@ balances <- function(Rain, par, plotit=T,
   
   # Plotting
   
-  if (plotit==T) {  
+  if (plotit==T) { 
+    mypath <- file.path("H:/Sandy Clay Loam",paste("run=",j, ".png", sep = ""))
+    
+    png(filename=mypath)
+
+    
     plot(M, type="l",ylim=c(-10,200),xlim=c(0,time),xlab=("time [d]"),  main=paste(" run=",j))
     points(Rain*10, type="h", col="skyblue")
     
@@ -241,8 +246,9 @@ balances <- function(Rain, par, plotit=T,
     
      legend("topright", title="Variables",cex=1, pt.cex=0.2, c("Moisture [mm]","Rainfall [mm]*10","overland flow depth[mm] ","salt mass in soil water [g]", "salt concentration in soil water [Mol/l]", "Plant biomass density [g/m^2]/10", "flux [mm]"),
              col=c("black","skyblue","blue","red","purple","green", "orange"),lty=1)
+
+    dev.off()
     
-  
      
   }
   

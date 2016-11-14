@@ -1,0 +1,526 @@
+---
+output: word_document
+---
+### Principal component analysis
+
+#cleaning the data
+##occations where plants die as an indicator (goes NA, if model crashes)
+```{r}
+# for(j in 1:nrow(Store)){
+#   if(is.na(Store$Pzero[j])){
+#     Store_failure <- rbind(Store_failure, Store[j,])
+#     Store<-Store[-j,]
+#   }
+# }
+```
+
+```{r}
+# for(j in 1:nrow(Store)){
+#   if(is.na(Store$Pzero[j])){
+#     Store_failure <- rbind(Store_failure, Store[j,])
+#     Store<-Store[-j,]
+#   }
+# }
+
+# no crashes in Store! :D Store.txt in the repo is a Monte Carlo simulation with Heavy clay, 800 days and 5000 runs
+# 
+# nrow(Store)
+# head(Store)
+# ncol(Store)
+
+```
+#### LINEAR REGRESSION
+
+Preparing the data
+```{r}
+
+mydata <- read.table("Sandy clay loam 5000 runs 800 days.txt")
+head(mydata)
+attach(mydata)
+
+```
+
+```{r}
+
+# for(i in (9:19))
+# { 
+#   for(j in (1:8) )
+#      
+#     {       
+#        fit <- lm(mydata[,i] ~ mydata[,j], data=mydata) #does a regression for each column in my csv file against my independent variable 'etch'
+#        rsq <- summary(fit)$r.squared
+#        writelines(paste(rsq,i,"\n"))
+#     }
+# }
+
+
+```
+
+
+
+ Mean soilmoisture M
+```{r}
+
+M_all <- lm(meanM ~ Z + Zr + d + ConcConst + CM.gw + c + alpha + lambda, data = mydata)
+summary(M_all)
+
+write.table(summary(M_all)$Coefficients, ""
+
+# # Groundwater depth Z
+# MZ <- lm(meanM ~ Z, data=mydata)
+# summary(MZ)
+# 
+# # Root depth Zr
+# MZr <- lm(meanM ~ Zr, data=mydata)
+# summary(MZr)
+# 
+# # plant mortality d
+# Md <- lm(meanM ~ d, data=mydata)
+# summary(Md)
+# 
+# # salt concentration in rain
+# MConcConst <- lm(meanM ~ ConcConst, data=mydata)
+# summary(MConcConst)
+# 
+# # salt concentration in groundwater
+# MCM.gw <- lm(meanM ~ CM.gw, data=mydata)
+# summary(MCM.gw)
+# 
+# # plant growth factor c
+# Mc <- lm(meanM ~ c, data=mydata)
+# summary(Mc)
+# 
+# # alpha
+# Malpha <- lm(meanM ~ alpha, data=mydata)
+# summary(Malpha)
+# 
+# # lambda
+# Mlambda <- lm(meanM ~ lambda, data=mydata)
+# summary(Mlambda)
+#  
+
+### comparing the models
+
+
+
+```
+
+
+###Standard deviation soilmoisture M (sdM)
+
+```{r}
+
+sdM_all <- lm(sdM ~ Z + Zr + d + ConcConst + CM.gw + c + alpha + lambda, data = mydata)
+summary(sdM_all)
+
+# Groundwater depth Z
+# sdMZ <- lm(sdM ~ Z, data=mydata)
+# summary(sdMZ)
+# 
+# # Root depth Zr
+# sdMZr <- lm(sdM ~ Zr, data=mydata)
+# summary(sdMZr)
+# 
+# # plant mortality d
+# sdMd <- lm(sdM ~ d, data=mydata)
+# summary(sdMd)
+# 
+# # salt concentration in rain
+# sdMConcConst <- lm(sdM ~ ConcConst, data=mydata)
+# summary(sdMConcConst)
+# 
+# # salt concentration in groundwater
+# sdMCM.gw <- lm(sdM ~ CM.gw, data=mydata)
+# summary(sdMCM.gw)
+# 
+# # plant growth factor c
+# sdMc <- lm(sdM ~ c, data=mydata)
+# summary(sdMc)
+# 
+# # alpha
+# sdMalpha <- lm(sdM ~ alpha, data=mydata)
+# summary(sdMalpha)
+# 
+# # lambda
+# sdMlambda <- lm(sdM ~ lambda, data=mydata)
+# summary(sdMlambda)
+#  
+
+### comparing the models
+
+
+
+
+```
+
+Mean soil SALT mass meanSmM
+
+
+```{r}
+
+SM_all <- lm(meanSmM ~ Z + Zr + d + ConcConst + CM.gw + c + alpha + lambda, data = mydata)
+summary(sdM_all)
+# 
+# # Groundwater depth Z
+# SMZ <- lm(meanSmM ~ Z, data=mydata)
+# summary(SMZ)
+# 
+# # Root depth Zr
+# SMZr <- lm(meanSmM ~ Zr, data=mydata)
+# summary(SMZr)
+# 
+# # plant mortality d
+# SMd <- lm(meanSmM ~ d, data=mydata)
+# summary(SMd)
+# 
+# # salt concentration in rain
+# SMConcConst <- lm(meanSmM ~ ConcConst, data=mydata)
+# summary(SMConcConst)
+# 
+# # salt concentration in groundwater
+# SMCM.gw <- lm(meanSmM ~ CM.gw, data=mydata)
+# summary(SMCM.gw)
+# 
+# # plant growth factor c
+# SMc <- lm(meanSmM ~ c, data=mydata)
+# summary(SMc)
+# 
+# # alpha
+# SMalpha <- lm(meanSmM ~ alpha, data=mydata)
+# summary(SMalpha)
+# 
+# # lambda
+# SMlambda <- lm(meanSmM ~ lambda, data=mydata)
+# summary(SMlambda)
+#  
+# 
+# ### comparing the models
+
+
+
+
+```
+
+ Standard deviation of Soil Salt mass sdSmM (maybe not too important)
+
+### Mean plant biomass P 
+
+meanP
+
+```{r}
+P_all <- lm(meanP ~ Z + Zr + d + ConcConst + CM.gw + c + alpha + lambda, data = mydata)
+summary(P_all)
+
+# # Groundwater depth Z
+# PZ <- lm(meanP ~ Z, data=mydata)
+# summary(PZ)
+# 
+# # Root depth Zr
+# PZr <- lm(meanP ~ Zr, data=mydata)
+# summary(PZr)
+# 
+# # plant mortality d
+# Pd <- lm(meanP ~ d, data=mydata)
+# summary(Pd)
+# 
+# # salt concentration in rain
+# PConcConst <- lm(meanP ~ ConcConst, data=mydata)
+# summary(PConcConst)
+# 
+# # salt concentration in groundwater
+# PCM.gw <- lm(meanP ~ CM.gw, data=mydata)
+# summary(PCM.gw)
+# 
+# # plant growth factor c
+# Pc <- lm(meanP ~ c, data=mydata)
+# summary(Pc)
+# 
+# # alpha
+# Palpha <- lm(meanP ~ alpha, data=mydata)
+# summary(Palpha)
+# 
+# # lambda
+# Plambda <- lm(meanP ~ lambda, data=mydata)
+# summary(Plambda)
+#  
+
+### comparing the models
+
+
+
+```
+
+
+### Standard deviation of plant biomass P (sdP)
+
+```{r}
+sdP_all <- lm(sdP ~ Z + Zr + d + ConcConst + CM.gw + c + alpha + lambda, data = mydata)
+summary(sdP_all)
+
+# # Groundwater depth Z
+# sdPZ <- lm(sdP ~ Z, data=mydata)
+# summary(sdPZ)
+# 
+# # Root depth Zr
+# sdPZr <- lm(sdP ~ Zr, data=mydata)
+# summary(sdPZr)
+# 
+# # plant mortality d
+# sdPd <- lm(sdP ~ d, data=mydata)
+# summary(sdPd)
+# 
+# # salt concentration in rain
+# sdPConcConst <- lm(sdP ~ ConcConst, data=mydata)
+# summary(sdPConcConst)
+# 
+# # salt concentration in groundwater
+# sdPCM.gw <- lm(sdP ~ CM.gw, data=mydata)
+# summary(sdPCM.gw)
+# 
+# # plant growth factor c
+# sdPc <- lm(sdP ~ c, data=mydata)
+# summary(sdPc)
+# 
+# # alpha
+# sdPalpha <- lm(sdP ~ alpha, data=mydata)
+# summary(sdPalpha)
+# 
+# # lambda
+# sdPlambda <- lm(sdP ~ lambda, data=mydata)
+# summary(sdPlambda)
+#  
+# 
+# ### comparing the models
+# 
+# 
+# ```
+# 
+# ### mean soil salt concentration (meanCM)
+#  
+#  
+#  
+# ```{r}
+# CM_all <- lm(meanCM ~ Z + Zr + d + ConcConst + CM.gw + c + alpha + lambda, data = mydata)
+# summary(CM_all)
+# 
+# # Groundwater depth Z
+# CMZ <- lm(meanCM ~ Z, data=mydata)
+# summary(CMZ)
+# 
+# # Root depth Zr
+# CMZr <- lm(meanCM ~ Zr, data=mydata)
+# summary(CMZr)
+# 
+# # plant mortality d
+# CMd <- lm(meanCM ~ d, data=mydata)
+# summary(CMd)
+# 
+# # salt concentration in rain
+# CMConcConst <- lm(meanCM ~ ConcConst, data=mydata)
+# summary(CMConcConst)
+# 
+# # salt concentration in groundwater
+# CMCM.gw <- lm(meanCM ~ CM.gw, data=mydata)
+# summary(CMCM.gw)
+# 
+# # plant growth factor c
+# CMc <- lm(meanCM ~ c, data=mydata)
+# summary(CMc)
+# 
+# # alpha
+# CMalpha <- lm(meanCM ~ alpha, data=mydata)
+# summary(CMalpha)
+# 
+# # lambda
+# CMlambda <- lm(meanCM ~ lambda, data=mydata)
+# summary(CMlambda)
+#  
+# 
+# ### comparing the models
+
+
+
+```
+ 
+Standard deviation of soil salt concentration sdCM, maybe not too important, can be added later
+ 
+Neither minimum of soil salt concentration minCM?? can later be added, easily
+
+### Maximum soil salt concentration  maxCM
+```{r}
+maxCM_all <- lm(maxCM ~ Z + Zr + d + ConcConst + CM.gw + c + alpha + lambda, data = mydata)
+summary(maxCM_all)
+
+# # Groundwater depth Z
+# maxCMZ <- lm(maxCM ~ Z, data=mydata)
+# summary(maxCMZ)
+# 
+# # Root depth Zr
+# maxCMZr <- lm(maxCM ~ Zr, data=mydata)
+# summary(maxCMZr)
+# 
+# # plant mortality d
+# maxCMd <- lm(maxCM ~ d, data=mydata)
+# summary(maxCMd)
+# 
+# # salt concentration in rain
+# maxCMConcConst <- lm(maxCM ~ ConcConst, data=mydata)
+# summary(maxCMConcConst)
+# 
+# # salt concentration in groundwater
+# maxCMCM.gw <- lm(maxCM ~ CM.gw, data=mydata)
+# summary(maxCMCM.gw)
+# 
+# # plant growth factor c
+# maxCMc <- lm(maxCM ~ c, data=mydata)
+# summary(maxCMc)
+# 
+# # alpha
+# maxCMalpha <- lm(maxCM ~ alpha, data=mydata)
+# summary(maxCMalpha)
+# 
+# # lambda
+# maxCMlambda <- lm(maxCM ~ lambda, data=mydata)
+# summary(maxCMlambda)
+#  
+# 
+# ### comparing the models
+
+
+```
+
+
+### Maximum soil salt concentration  maxCM
+```{r}
+maxCM_all <- lm(maxCM ~ Z + Zr + d + ConcConst + CM.gw + c + alpha + lambda, data = mydata)
+summary(maxCM_all)
+
+# # Groundwater depth Z
+# maxCMZ <- lm(maxCM ~ Z, data=mydata)
+# summary(maxCMZ)
+# 
+# # Root depth Zr
+# maxCMZr <- lm(maxCM ~ Zr, data=mydata)
+# summary(maxCMZr)
+# 
+# # plant mortality d
+# maxCMd <- lm(maxCM ~ d, data=mydata)
+# summary(maxCMd)
+# 
+# # salt concentration in rain
+# maxCMConcConst <- lm(maxCM ~ ConcConst, data=mydata)
+# summary(maxCMConcConst)
+# 
+# # salt concentration in groundwater
+# maxCMCM.gw <- lm(maxCM ~ CM.gw, data=mydata)
+# summary(maxCMCM.gw)
+# 
+# # plant growth factor c
+# maxCMc <- lm(maxCM ~ c, data=mydata)
+# summary(maxCMc)
+# 
+# # alpha
+# maxCMalpha <- lm(maxCM ~ alpha, data=mydata)
+# summary(maxCMalpha)
+# 
+# # lambda
+# maxCMlambda <- lm(maxCM ~ lambda, data=mydata)
+# summary(maxCMlambda)
+#  
+# 
+# ### comparing the models
+
+
+
+```
+
+
+### Cumulative vertical water flux, cum_flux
+```{r}
+cf_all <- lm(cum_flux ~ Z + Zr + d + ConcConst + CM.gw + c + alpha + lambda, data = mydata)
+summary(cf_all)
+
+# # Groundwater depth Z
+# cfZ <- lm(cum_flux ~ Z, data=mydata)
+# summary(cfZ)
+# 
+# # Root depth Zr
+# cfZr <- lm(cum_flux ~ Zr, data=mydata)
+# summary(cfZr)
+# 
+# # plant mortality d
+# cfd <- lm(cum_flux ~ d, data=mydata)
+# summary(cfd)
+# 
+# # salt concentration in rain
+# cfConcConst <- lm(cum_flux ~ ConcConst, data=mydata)
+# summary(cfConcConst)
+# 
+# # salt concentration in groundwater
+# cfCM.gw <- lm(cum_flux ~ CM.gw, data=mydata)
+# summary(cfCM.gw)
+# 
+# # plant growth factor c
+# cfc <- lm(cum_flux ~ c, data=mydata)
+# summary(cfc)
+# 
+# # alpha
+# cfalpha <- lm(cum_flux ~ alpha, data=mydata)
+# summary(cfalpha)
+# 
+# # lambda
+# cflambda <- lm(cum_flux ~ lambda, data=mydata)
+# summary(cflambda)
+#  
+
+### comparing the models
+
+
+
+```
+
+
+
+### Plant death, P=0, Pzero
+```{r}
+Pzero_all <- lm(Pzero ~ Z + Zr + d + ConcConst + CM.gw + c + alpha + lambda, data = mydata)
+summary(Pzero_all)
+
+# Groundwater depth Z
+# PzeroZ <- lm(Pzero ~ Z, data=mydata)
+# summary(PzeroZ)
+# 
+# # Root depth Zr
+# PzeroZr <- lm(Pzero ~ Zr, data=mydata)
+# summary(PzeroZr)
+# 
+# # plant mortality d
+# Pzerod <- lm(Pzero ~ d, data=mydata)
+# summary(Pzerod)
+# 
+# # salt concentration in rain
+# PzeroConcConst <- lm(Pzero ~ ConcConst, data=mydata)
+# summary(PzeroConcConst)
+# 
+# # salt concentration in groundwater
+# PzeroCM.gw <- lm(Pzero ~ CM.gw, data=mydata)
+# summary(PzeroCM.gw)
+# 
+# # plant growth factor c
+# Pzeroc <- lm(Pzero ~ c, data=mydata)
+# summary(Pzeroc)
+# 
+# # alpha
+# Pzeroalpha <- lm(Pzero ~ alpha, data=mydata)
+# summary(Pzeroalpha)
+# 
+# # lambda
+# Pzerolambda <- lm(Pzero ~ lambda, data=mydata)
+# summary(Pzerolambda)
+#  
+
+### comparing the models
+
+
+
+```
