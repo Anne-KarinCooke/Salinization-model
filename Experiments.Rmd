@@ -749,7 +749,6 @@ wilcox.test(h1M,h2M) # soil moisture
 wilcox.test(h1P,h2P) # plant biomass
 wilcox.test(h1SmM,h2SmM) # soil salt mass
 wilcox.test(h1CM,h2CM) # soil salt concentration
-
 ```
 
 ## Conclusive remarks

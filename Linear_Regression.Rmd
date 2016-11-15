@@ -68,9 +68,9 @@ M_all <- lm(meanM ~ Z + Zr + d + ConcConst + CM.gw + c + alpha + lambda, data = 
 summary(M_all)
 
 #  Scatterplot Matrices from the car Package
-# library(car)
-# scatterplot.matrix(mydata[9:19], data=mydata,
-#     main="Heavy medium clay, 5000 runs, 800 days")
+library(car)
+scatterplot.matrix(mydata[9:19], data=mydata,
+    main="Heavy medium clay, 5000 runs, 800 days")
 
 
 plot(mydata$Zr,mydata$meanM, main= "Root depth and mean soil moisture")
