@@ -3,7 +3,7 @@
 ---
 title: "1D Model"
 author: "Anne-Karin Cooke"
-output: word_document
+output: html_document
 ---
 
   

@@ -34,16 +34,11 @@ output: word_document
 Preparing the data
 ```{r}
 
-mydata <- read.table("Store.txt")
+mydata <- read.table("Sandy clay loam 5000 runs 800 days.txt")
 head(mydata)
 attach(mydata)
 
-dd <-scale(mydata$c)
-cf <- scale(mydata$cum_flux)
-plot(dd, cf)
-plot(cf,dd)
-plot(mydata$c, mydata$cum_flux)
-plot(mydata$cum_flux,mydata$c)
+
 
 
 ```
@@ -72,28 +67,28 @@ plot(mydata$cum_flux,mydata$c)
 M_all <- lm(meanM ~ Z + Zr + d + ConcConst + CM.gw + c + alpha + lambda, data = mydata)
 summary(M_all)
 
-# #  Scatterplot Matrices from the car Package
-# library(car)
-# scatterplot.matrix(mydata[9:19], data=mydata,
-#     main="Heavy medium clay, 5000 runs, 800 days")
+###  Scatterplot Matrices from the car Package
+library(car)
+scatterplot.matrix(mydata[9:19], data=mydata,
+    main="Heavy medium clay, 5000 runs, 800 days")
 
 
-# plot(mydata$Zr,mydata$meanM, main= "Root depth and mean soil moisture")
-# plot(mydata$d,mydata$meanM, main= "Root depth and mean soil moisture")
-# plot(mydata$c,mydata$meanM, main= "Plan growth factor and mean soil moisture")
-# 
-# plot(mydata$Z,mydata$meanP, main= "Groundwater depth and mean plant biomass")
-# plot(mydata$d,mydata$meanP, main= "Plant mortality and mean plant biomass")
-# plot(mydata$c,mydata$meanP, main= "Plant growth factor and mean plant biomass")
-# plot(mydata$alpha,mydata$meanP, main= "Alpha and mean plant biomass")
-# plot(mydata$lambda,mydata$meanP, main= "Lambda and mean plant biomass")
-# 
-# plot(mydata$Z,mydata$maxCM, main= "Groundwater depth and maximum soil salt concentration")
-# plot(mydata$d,mydata$maxCM, main= "Groundwater depth and maximum soil salt concentration")
-# plot(mydata$ConcConst,mydata$maxCM, main= "Rain salt mass and maximum soil salt concentration")
-# plot(mydata$c,mydata$maxCM, main= "Plant growth factor and maximum soil salt concentration")
-# plot(mydata$alpha,mydata$maxCM, main= "Alpha and maximum soil salt concentration")
-# plot(mydata$lambda,mydata$maxCM, main= "Lambda and maximum soil salt concentration")
+plot(mydata$Zr,mydata$meanM, main= "Root depth and mean soil moisture")
+plot(mydata$d,mydata$meanM, main= "Root depth and mean soil moisture")
+plot(mydata$c,mydata$meanM, main= "Plan growth factor and mean soil moisture")
+
+plot(mydata$Z,mydata$meanP, main= "Groundwater depth and mean plant biomass")
+plot(mydata$d,mydata$meanP, main= "Plant mortality and mean plant biomass")
+plot(mydata$c,mydata$meanP, main= "Plant growth factor and mean plant biomass")
+plot(mydata$alpha,mydata$meanP, main= "Alpha and mean plant biomass")
+plot(mydata$lambda,mydata$meanP, main= "Lambda and mean plant biomass")
+
+plot(mydata$Z,mydata$maxCM, main= "Groundwater depth and maximum soil salt concentration")
+plot(mydata$d,mydata$maxCM, main= "Groundwater depth and maximum soil salt concentration")
+plot(mydata$ConcConst,mydata$maxCM, main= "Rain salt mass and maximum soil salt concentration")
+plot(mydata$c,mydata$maxCM, main= "Plant growth factor and maximum soil salt concentration")
+plot(mydata$alpha,mydata$maxCM, main= "Alpha and maximum soil salt concentration")
+plot(mydata$lambda,mydata$maxCM, main= "Lambda and maximum soil salt concentration")
 
 # write.table(summary(M_all)$Coefficients, ""
 
