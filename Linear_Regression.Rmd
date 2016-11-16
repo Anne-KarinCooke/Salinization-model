@@ -45,6 +45,82 @@ plot(cf,dd)
 plot(mydata$c, mydata$cum_flux)
 plot(mydata$cum_flux,mydata$c)
 
+require(ggplot2)
+
+# lambda_sum <- do.call(rbind,Store[][[2]])
+# lambda_sum$time <- rep(1:time,length(lambda))
+
+
+data <- read.table("Sandy Clay loam 5000 runs 800 days.txt",header=T)
+names(data)
+ 
+require(ggplot2)
+pl <- ggplot(data,aes(x=c,y=cum_flux, col=lambda*alpha)) + geom_point()
+pl
+
+ 
+require(dplyr)
+mydata <- data
+ 
+newdata <- mydata %>%  mutate(quantile = ntile(d, 10))
+names(newdata)
+ 
+pl <- ggplot(newdata,aes(x=c,y=cum_flux, col=Zr/(lambda*alpha))) + geom_point()
+pl <- pl + facet_wrap(~quantile)
+pl
+ 
+
+###
+#It is something related to larger c values, flip the > sign to < in the below code
+ 
+mydata1 <- subset(mydata,mydata$c<5)
+mydata1 <- subset(mydata,mydata$c>5 & mydata$Z > 5000)
+
+newdata1 <- mydata1 %>%  mutate(quantile = ntile(d, 10))
+names(newdata1)
+ 
+pl <- ggplot(newdata1,aes(x=c,y=cum_flux, col=Zr/(lambda*alpha))) + geom_point()
+pl <- pl + facet_wrap(~quantile)
+pl
+
+
+ 
+
+zeroflux <- data.frame()
+for (i in length(mydata)){
+  if(mydata$cum_flux[i]<50 && mydata$cum_flux[i]>100){
+    
+  zeroflux[i,] <- rbind(mydata[i,])
+  }
+}
+
+zeroflux
+
+summary(mydata$cum_flux)
+plot(mydata$cum_flux, ylim=c(-10000,7000))
+
+hist(cum_flux)
+
+
+# pl <- ggplot(mydata,aes(x=mydata$c,y=mydata$cum_flux, col=as.factor(mydata$lambda))) + geom_line()
+# # pl  <- pl + geom_line(aes(x=time,y=M, colour="Moisture"))  
+# pl <- pl +  facet_wrap(~mydata$alpha)   
+# pl  + ggtitle("Plant biomass P and soilmoisture M for varying lambdas") +  geom_line(aes(x=time, y=SmM, colour= "S (soil salt mg/L")) + theme(plot.title = element_text(lineheight=.4))
+```
+
+Plotting Soil water salt concentration for different alphas and lambdas
+
+```{r}
+lambda_sum_all <- do.call(rbind,do.call(rbind,Store))
+lambda_sum_all$time <- rep(rep(1:time,length(lambda)),length(alpha))
+
+
+pa <- ggplot(lambda_sum_all,aes(x=time,y=SmM,col=as.factor(lambda_o))) + geom_line(linetype=1) 
+# pa <- pa + + scale_color_gradient(low="blue", high="red")
+pa <- pa  + facet_wrap(~alpha_o) + ggtitle("Soil water salt mass [g] for varying alphas and lambdas") + theme(plot.title = element_text(lineheight=.4))
+pa  
+
+
 
 ```
 
@@ -71,6 +147,8 @@ plot(mydata$cum_flux,mydata$c)
 
 M_all <- lm(meanM ~ Z + Zr + d + ConcConst + CM.gw + c + alpha + lambda, data = mydata)
 summary(M_all)
+
+
 
 # #  Scatterplot Matrices from the car Package
 # library(car)

@@ -51,7 +51,7 @@ Soil properties were derived from standard Australian soils in Neurotheta (Minas
    hb = psi_s_bar*-10^5 # mm
  
 
-  Z =3000 # [mm] actual groundwater depth 
+  Z =20000 # [mm] actual groundwater depth 
 
 # parameters describing the soil
   soilpar <- list(b = b, n = n, s_fc = s_fc, K_s = K_s, 
@@ -77,8 +77,8 @@ Soil properties were derived from standard Australian soils in Neurotheta (Minas
   k1=5 # Saco et al, 2013
   c=10  # Saco et al, 2013
   f= 1  # f is the soil salt leaching efficiency (whether some salt is retained)
-  ConcConst = 0.1 # ConcConst is the concentration of the salt in the infiltrating water in g/l
-  CM.gw = 0.1 # salt concentration in groundwater
+  ConcConst = 0 # ConcConst is the concentration of the salt in the infiltrating water in g/l
+  CM.gw = 0 # salt concentration in groundwater
   d=0.24 # fraction of plant mortality
   
   par <- list(alpha_i=alpha_i,k=k, W0=W0, gmax=gmax, k1=k1, c=c, f=f, ConcConst=ConcConst, CM.gw= CM.gw, d=d)
@@ -460,7 +460,7 @@ Soil properties were derived from standard Australian soils in Neurotheta (Minas
    hb = psi_s_bar*-10^5 # mm
  
 
-  Z =3000 # [mm] actual groundwater depth 
+ # [mm] actual groundwater depth 
 
 # parameters describing the soil
   soilpar <- list(b = b, n = n, s_fc = s_fc, K_s = K_s, 
@@ -486,8 +486,8 @@ Soil properties were derived from standard Australian soils in Neurotheta (Minas
   k1=5 # Saco et al, 2013
   c=10  # Saco et al, 2013
   f= 1  # f is the soil salt leaching efficiency (whether some salt is retained)
-  ConcConst = 0.1 # ConcConst is the concentration of the salt in the infiltrating water in g/l
-  CM.gw = 0.1 # salt concentration in groundwater
+  ConcConst = 0 # ConcConst is the concentration of the salt in the infiltrating water in g/l
+  CM.gw = 0 # salt concentration in groundwater
   d=0.24 # fraction of plant mortality
   
   par <- list(alpha_i=alpha_i,k=k, W0=W0, gmax=gmax, k1=k1, c=c, f=f, ConcConst=ConcConst, CM.gw= CM.gw, d=d)
