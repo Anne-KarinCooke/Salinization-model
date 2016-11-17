@@ -72,19 +72,19 @@ pl
 
 ###
 #It is something related to larger c values, flip the > sign to < in the below code
- 
-mydata1 <- subset(mydata,mydata$c<5)
-mydata1 <- subset(mydata,mydata$c>5 & mydata$Z > 5000)
+
+mydata1 <- subset(mydata,mydata$c>7 & mydata$Z < 2000)
 
 newdata1 <- mydata1 %>%  mutate(quantile = ntile(d, 10))
-names(newdata1)
+
+# names(newdata1)
  
 pl <- ggplot(newdata1,aes(x=c,y=cum_flux, col=Zr/(lambda*alpha))) + geom_point()
 pl <- pl + facet_wrap(~quantile)
 pl
 
 
- 
+plot(mydata1$c, mydata1$cum_flux) 
 
 zeroflux <- data.frame()
 for (i in length(mydata)){
@@ -268,7 +268,7 @@ Mean soil SALT mass meanSmM
 ```{r}
 
 SM_all <- lm(meanSmM ~ Z + Zr + d + ConcConst + CM.gw + c + alpha + lambda, data = mydata)
-summary(sdM_all)
+summary(SM_all)
 # 
 # # Groundwater depth Z
 # SMZ <- lm(meanSmM ~ Z, data=mydata)
