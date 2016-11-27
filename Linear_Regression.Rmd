@@ -73,15 +73,17 @@ pl
 ###
 #It is something related to larger c values, flip the > sign to < in the below code
 
-mydata1 <- subset(mydata,mydata$c>7 & mydata$Z < 2000)
+mydata1 <- subset(mydata,mydata$c>2.5 & mydata$Z > 2000)
 
 newdata1 <- mydata1 %>%  mutate(quantile = ntile(d, 10))
 
 # names(newdata1)
  
 pl <- ggplot(newdata1,aes(x=c,y=cum_flux, col=Zr/(lambda*alpha))) + geom_point()
-pl <- pl + facet_wrap(~quantile)
+pl <- pl + facet_wrap(~quantile) + ggtitle("Vertical flux vs plant growth factor c, in quantiles of plant mortality d, Z > 2000 mm and c>2.5 ") + theme(plot.title = element_text(lineheight=.8, face="bold")) 
 pl
+
+
 
 
 plot(mydata1$c, mydata1$cum_flux) 
@@ -108,21 +110,6 @@ hist(cum_flux)
 # pl  + ggtitle("Plant biomass P and soilmoisture M for varying lambdas") +  geom_line(aes(x=time, y=SmM, colour= "S (soil salt mg/L")) + theme(plot.title = element_text(lineheight=.4))
 ```
 
-Plotting Soil water salt concentration for different alphas and lambdas
-
-```{r}
-lambda_sum_all <- do.call(rbind,do.call(rbind,Store))
-lambda_sum_all$time <- rep(rep(1:time,length(lambda)),length(alpha))
-
-
-pa <- ggplot(lambda_sum_all,aes(x=time,y=SmM,col=as.factor(lambda_o))) + geom_line(linetype=1) 
-# pa <- pa + + scale_color_gradient(low="blue", high="red")
-pa <- pa  + facet_wrap(~alpha_o) + ggtitle("Soil water salt mass [g] for varying alphas and lambdas") + theme(plot.title = element_text(lineheight=.4))
-pa  
-
-
-
-```
 
 ```{r}
 
