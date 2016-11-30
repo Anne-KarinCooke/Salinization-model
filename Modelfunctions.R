@@ -228,7 +228,7 @@ balances <- function(Rain, par, plotit=T,
   # Plotting
   
   if (plotit==T) { 
-    mypath <- file.path("H:/Sandy Clay Loam EAGELSON",paste("run=",j, ".png", sep = ""))
+    mypath <- file.path("H:/Medium heavy clay Eagelson",paste("run=",j, ".png", sep = ""))
     
     png(filename=mypath)
 

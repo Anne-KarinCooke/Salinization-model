@@ -34,74 +34,74 @@ output: word_document
 Preparing the data
 ```{r}
 
-mydata <- read.table("Store.txt")
+mydata <- read.table("EAGELSON loamy clay sand 5000 runs 800 days.txt")
 head(mydata)
 attach(mydata)
-
-dd <-scale(mydata$c)
-cf <- scale(mydata$cum_flux)
-plot(dd, cf)
-plot(cf,dd)
-plot(mydata$c, mydata$cum_flux)
-plot(mydata$cum_flux,mydata$c)
-
-require(ggplot2)
+# 
+# dd <-scale(mydata$c)
+# cf <- scale(mydata$cum_flux)
+# plot(dd, cf)
+# plot(cf,dd)
+# plot(mydata$c, mydata$cum_flux)
+# plot(mydata$cum_flux,mydata$c)
+# 
+# require(ggplot2)
 
 # lambda_sum <- do.call(rbind,Store[][[2]])
 # lambda_sum$time <- rep(1:time,length(lambda))
 
-
-data <- read.table("Sandy Clay loam 5000 runs 800 days.txt",header=T)
-names(data)
- 
-require(ggplot2)
-pl <- ggplot(data,aes(x=c,y=cum_flux, col=lambda*alpha)) + geom_point()
-pl
-
- 
-require(dplyr)
-mydata <- data
- 
-newdata <- mydata %>%  mutate(quantile = ntile(d, 10))
-names(newdata)
- 
-pl <- ggplot(newdata,aes(x=c,y=cum_flux, col=Zr/(lambda*alpha))) + geom_point()
-pl <- pl + facet_wrap(~quantile)
-pl
- 
+# 
+# data <- read.table("Sandy Clay loam 5000 runs 800 days.txt",header=T)
+# names(data)
+#  
+# require(ggplot2)
+# pl <- ggplot(data,aes(x=c,y=cum_flux, col=lambda*alpha)) + geom_point()
+# pl
+# 
+#  
+# require(dplyr)
+# mydata <- data
+#  
+# newdata <- mydata %>%  mutate(quantile = ntile(d, 10))
+# names(newdata)
+#  
+# pl <- ggplot(newdata,aes(x=c,y=cum_flux, col=Zr/(lambda*alpha))) + geom_point()
+# pl <- pl + facet_wrap(~quantile)
+# pl
+#  
 
 ###
 #It is something related to larger c values, flip the > sign to < in the below code
-
-mydata1 <- subset(mydata,mydata$c>2.5 & mydata$Z > 2000)
-
-newdata1 <- mydata1 %>%  mutate(quantile = ntile(d, 10))
-
-# names(newdata1)
- 
-pl <- ggplot(newdata1,aes(x=c,y=cum_flux, col=Zr/(lambda*alpha))) + geom_point()
-pl <- pl + facet_wrap(~quantile) + ggtitle("Vertical flux vs plant growth factor c, in quantiles of plant mortality d, Z > 2000 mm and c>2.5 ") + theme(plot.title = element_text(lineheight=.8, face="bold")) 
-pl
-
-
-
-
-plot(mydata1$c, mydata1$cum_flux) 
-
-zeroflux <- data.frame()
-for (i in length(mydata)){
-  if(mydata$cum_flux[i]<50 && mydata$cum_flux[i]>100){
-    
-  zeroflux[i,] <- rbind(mydata[i,])
-  }
-}
-
-zeroflux
-
-summary(mydata$cum_flux)
-plot(mydata$cum_flux, ylim=c(-10000,7000))
-
-hist(cum_flux)
+# 
+# mydata1 <- subset(mydata,mydata$c>2.5 & mydata$Z > 2000)
+# 
+# newdata1 <- mydata1 %>%  mutate(quantile = ntile(d, 10))
+# 
+# # names(newdata1)
+#  
+# pl <- ggplot(newdata1,aes(x=c,y=cum_flux, col=Zr/(lambda*alpha))) + geom_point()
+# pl <- pl + facet_wrap(~quantile) + ggtitle("Vertical flux vs plant growth factor c, in quantiles of plant mortality d, Z > 2000 mm and c>2.5 ") + theme(plot.title = element_text(lineheight=.8, face="bold")) 
+# pl
+# 
+# 
+# 
+# 
+# plot(mydata1$c, mydata1$cum_flux) 
+# 
+# zeroflux <- data.frame()
+# for (i in length(mydata)){
+#   if(mydata$cum_flux[i]<50 && mydata$cum_flux[i]>100){
+#     
+#   zeroflux[i,] <- rbind(mydata[i,])
+#   }
+# }
+# 
+# zeroflux
+# 
+# summary(mydata$cum_flux)
+# plot(mydata$cum_flux, ylim=c(-10000,7000))
+# 
+# hist(cum_flux)
 
 
 # pl <- ggplot(mydata,aes(x=mydata$c,y=mydata$cum_flux, col=as.factor(mydata$lambda))) + geom_line()

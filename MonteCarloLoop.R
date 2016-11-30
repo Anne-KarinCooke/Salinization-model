@@ -13,35 +13,38 @@ source("modelfunctions.R")
 # ...................
 # Soil and vegetation
 # ...................
-# Sandy Clay Loam
-n<-0.367 # porosity
+# # Sandy Clay Loam
+# n<-0.367 # porosity
+# # more soil variables for evaporation & losses
+# # Hydraulic conductivity
+# K_s<-52.08*10 # mm/day
+# # campbell's b
+# b<-6.4069 # neurotheta sandy clay loam
+# # van Genuchten parameters
+# #     avg <- 0.0521
+# #     nvg <- 1.237
+# # s_fc<-0.2677/n # Field capacity _ not used 
+# # This is the bubbling pressure
+# psi_s_bar<--1.2E-3 #
+# h1bar =  -psi_s_bar 
+# hb = psi_s_bar*-10^5 # mm
+
+#Medium Heavy Clay
+n<-0.4473 # porosity
 # more soil variables for evaporation & losses
 # Hydraulic conductivity
-K_s<-52.08*10 # mm/day
-# campbell's b
-b<-6.4069 # neurotheta sandy clay loam
+K_s<-2.82*10 # mm/day
+# Campbell's b
+b<-16.1501 # neurotheta Medium heavy clay
 # van Genuchten parameters
-#     avg <- 0.0521
-#     nvg <- 1.237
-# s_fc<-0.2677/n # Field capacity _ not used 
-# This is the bubbling pressure
-psi_s_bar<--1.2E-3 #
+# avg <- 0.0613
+# nvg <- 1.086
+# s_fc<-0.3936/n # Field capacity
+# bubbling pressure
+psi_s_bar<--1.4E-3 # I
 h1bar =  -psi_s_bar 
 hb = psi_s_bar*-10^5 # mm
 
-##Medium Heavy Clay
-# n<-0.4473 # porosity
-# # more soil variables for evaporation & losses
-# # Hydraulic conductivity
-# K_s<-2.82*10 # mm/day
-# # Campbell's b
-# b<-16.1501 # neurotheta Medium heavy clay
-# # van Genuchten parameters
-# # avg <- 0.0613
-# # nvg <- 1.086
-# # s_fc<-0.3936/n # Field capacity
-# # bubbling pressure
-# psi_s_bar<--1.4E-3 # I
 
 # # Coarse sand
 # n<-0.368 # porosity
@@ -192,13 +195,13 @@ for (j in 1:runs) {
 
 )
 
-# for(j in 1:nrow(Store)){
-#   if(is.na(Store$Pzero[j])){
-#     Store_failure <- rbind(Store_failure, Store[j,])
-#     Store<-Store[-j,]
-#   }
-# }
-# 
-# write.table(Store, "Loamy clay sand 5000 runs 800 days.txt")
+for(j in 1:nrow(Store)){
+  if(is.na(Store$Pzero[j])){
+    Store_failure <- rbind(Store_failure, Store[j,])
+    Store<-Store[-j,]
+  }
+}
+
+ write.table(Store, "EAGELSON Loamy clay sand 5000 runs 800 days.txt")
 # write.table(Store_failure, "FAILURES Loamy clay sand 5000 runs 800 days.txt")
 
