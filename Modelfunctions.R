@@ -31,11 +31,12 @@ L_n <- function(M,Z,soilpar,vegpar) {
   m=2 + 3/soilpar$b#5.64  # in Salvucci's paper it is called n, but I called it m here to not confuse it with porosity
   
   
-  q <-((Z/hb)^(-m)-(psi/hb)^(-m))/(1+(psi/hb)^(-m)+(m-1)*(Z/hb)^(-m))#/(soilpar$n*Zr) # 
+#  q <-((Z/hb)^(-m)-(psi/hb)^(-m))/(1+(psi/hb)^(-m)+(m-1)*(Z/hb)^(-m)) # Salvucci
+  q<- (s^(2*soilpar$b+3))-(1+((3/2)/(m)))*(hb/(Z))^m # Eagelson
   
   # Mass flux
   
-  flux <- soilpar$K_s*q
+  flux <- -soilpar$K_s*q
   
   return(flux)
 }
@@ -227,7 +228,7 @@ balances <- function(Rain, par, plotit=T,
   # Plotting
   
   if (plotit==T) { 
-    mypath <- file.path("H:/Sandy Clay Loam",paste("run=",j, ".png", sep = ""))
+    mypath <- file.path("H:/Sandy Clay Loam EAGELSON",paste("run=",j, ".png", sep = ""))
     
     png(filename=mypath)
 
