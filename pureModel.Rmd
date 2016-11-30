@@ -1,4 +1,4 @@
-
+`
   
 ---
 title: "1D Model"
@@ -44,7 +44,7 @@ Soil properties were derived from standard Australian soils in Neurotheta (Minas
    hb = psi_s_bar*-10^5 # mm
  
 
-  Z =3000 # [mm] actual groundwater depth 
+  Z =5000 # [mm] actual groundwater depth 
 
 # parameters describing the soil
   soilpar <- list(b = b, n = n, s_fc = s_fc, K_s = K_s, 
@@ -116,11 +116,19 @@ L_n <- function(M,Z,soilpar,vegpar) {
    m=2 + 3/soilpar$b#5.64  # in Salvucci's paper it is called n, but I called it m here to not confuse it with porosity
 
 
-q <-((Z/hb)^(-m)-(psi/hb)^(-m))/(1+(psi/hb)^(-m)+(m-1)*(Z/hb)^(-m))#/(soilpar$n*Zr) # 
+# q <-((Z/hb)^(-m)-(psi/hb)^(-m))/(1+(psi/hb)^(-m)+(m-1)*(Z/hb)^(-m))#/(soilpar$n*Zr) # # Salvucci
+q<- (s^(2*soilpar$b+3))-(1+((3/2)/(m)))*(hb/(Z))^m  # Eagelson
+
+
+#/(soilpar$n*Zr) # 
 
 # Mass flux
 
-flux <- soilpar$K_s*q
+flux <- -soilpar$K_s*q
+
+# Mass flux
+
+# flux <- soilpar$K_s*q
 
 return(flux)
 }
@@ -185,6 +193,9 @@ balances <- function(Rain, par, plotit=T,
 
    Svir <- rep(0,length(Rain)) # virtual saturation
    flux<- rep(0,length(Rain)) # drainage and capillary rise flux, according to sign
+   
+   #mass balance
+    mb <- rep(0,length(Rain))
 
 
 
@@ -223,6 +234,8 @@ balances <- function(Rain, par, plotit=T,
    U_salt <-rep(0,deltat) # Salt mass rising
    L_salt <-rep(0,deltat) # salt mass drained
 
+#mass balance
+mb_sub <-rep(0,deltat)
 
   
    timeincr= 1/deltat
@@ -299,6 +312,8 @@ balances <- function(Rain, par, plotit=T,
                        (soilpar$n*vegpar$Zr))^(-soilpar$b)
                        +(3.6*CM_sub[tt + 1]))^(-1/soilpar$b)
 
+mb_sub[tt] <- I_sub[tt] - WU_sub[tt] + flux_sub[tt]
+
     } 
   
 # Aggregating the substep results to daily values.
@@ -312,6 +327,7 @@ balances <- function(Rain, par, plotit=T,
     In[t]= sum(I_sub)
     flux[t] = sum(flux_sub)
     Svir[t] = Svir_sub[deltat]
+    mb[t] = sum(mb_sub[deltat])
 
 }
 
@@ -325,7 +341,7 @@ if (plotit==T) {
     lines(h,type="l", col="blue")
     abline(h=0, col="Gray50",lwd=2,lty=2)
 
-    lines(SmM,type="l", col="red")
+    lines(mb*100,type="l", col="red")
     lines(CM,type="l", col="purple")
     lines(P/10,type="l", col="green")
     lines(flux,type="l", col="orange")
@@ -336,7 +352,7 @@ if (plotit==T) {
 #  
 }
 
-Out <- data.frame(P=P,M=M,h=h, CM=CM, SmM=SmM, In=In, flux=flux, Svir=Svir)
+Out <- data.frame(P=P,M=M,h=h, CM=CM, SmM=SmM, In=In, flux=flux, Svir=Svir, mb=mb)
 return(Out)
 }
 ```
@@ -405,3 +421,6 @@ pa <- ggplot(lambda_sum_all,aes(x=time,y=SmM,col=as.factor(lambda_o))) + geom_li
 pa <- pa  + facet_wrap(~alpha_o) + ggtitle("Soil water salt mass [g] for varying alphas and lambdas") + theme(plot.title = element_text(lineheight=.4))
 pa  
 ```
+
+```{r}
+lambda_sum$mb
