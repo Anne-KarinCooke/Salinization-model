@@ -34,7 +34,9 @@ output: word_document
 Preparing the data
 ```{r}
 
-mydata <- read.table("EAGELSON loamy clay sand 5000 runs 800 days.txt")
+
+mydata <- read.table("EAGELSON heavy medium clay 5000 runs 800 days.txt")
+
 head(mydata)
 attach(mydata)
 # 
