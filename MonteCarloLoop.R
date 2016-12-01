@@ -202,6 +202,6 @@ for(j in 1:nrow(Store)){
   }
 }
 
- write.table(Store, "EAGELSON Loamy clay sand 5000 runs 800 days.txt")
+ write.table(Store, "EAGELSON heavy medium clay 5000 runs 800 days.txt")
 # write.table(Store_failure, "FAILURES Loamy clay sand 5000 runs 800 days.txt")
 
